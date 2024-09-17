@@ -3,6 +3,8 @@ import threading
 import sqlite3
 
 host = '127.0.0.1'  # Local host IP address
+# host = socket.gethostbyname(socket.gethostname())    --- Determines the local machines ip address automatically instead of typing it in !
+
 port = 55456
 
 # Create a server socket using IPv4 and TCP protocols
