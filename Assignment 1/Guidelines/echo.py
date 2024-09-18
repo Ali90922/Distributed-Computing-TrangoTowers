@@ -23,3 +23,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             print("timed out!")
              
 
+#This script implements a simple TCP echo server, it listens on port 5000 for incoming connections, 
+# when the client connects it recieves data sent from the client. The server echos the reciveed data back to the client
+#It also prints the recieved data to the servers console
+
