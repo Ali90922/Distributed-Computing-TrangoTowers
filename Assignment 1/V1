@@ -138,3 +138,8 @@ receive_thread.start()
 
 write_thread = threading.Thread(target=write)
 write_thread.start()
+
+
+
+
+Old Version with threading -- need to implement a new version with threading!

@@ -1,27 +1,15 @@
 import socket
-import threading
 import sqlite3
+import select
 
-host = '127.0.0.1'  # Local host IP address
-# host = socket.gethostbyname(socket.gethostname())    --- Determines the local machines ip address automatically instead of typing it in !
-
+host = '127.0.0.1'
 port = 55456
 
-# Create a server socket using IPv4 and TCP protocols
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-
-server.bind((host, port))  # Bind the server to the specified host and port
-server.listen()  # Server starts listening for incoming connections
-
-clients = []
-Nicknames = []
-
-
-# Connect to SQLite database (or create it if it doesn't exist)
+# Connect to SQLite database
 conn = sqlite3.connect('chat.db', check_same_thread=False)
 cursor = conn.cursor()
 
-# Create a table for storing messages if it doesn't exist
+# Create table for storing messages
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,67 +19,88 @@ cursor.execute('''
 ''')
 conn.commit()
 
+# Create a server socket (IPv4 + TCP)
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind((host, port))
+server.listen()
 
+# Set server socket to non-blocking
+server.setblocking(False)
 
-# Broadcast function to send a message to all connected clients and save to database
-def Broadcast(message, nickname):
-    for client in clients:
-        client.send(f"{nickname}: {message}".encode('ascii'))
-    # Save the message to the database
-    cursor.execute('INSERT INTO messages (nickname, message) VALUES (?, ?)', (nickname, message))
+# List of sockets to monitor for incoming data
+sockets_list = [server]
+clients = {}
+nicknames = {}
+
+# Broadcast message to all connected clients and save to the database
+def broadcast(message, sender_socket=None):
+    sender_nickname = nicknames.get(sender_socket, "Unknown")  # Get the nickname associated with the socket
+    for client_socket in clients.keys():
+        if client_socket != sender_socket:  # Don't send the message back to the sender
+            try:
+                client_socket.send(message.encode('ascii'))
+            except:
+                client_socket.close()
+                sockets_list.remove(client_socket)
+                del clients[client_socket]
+
+    # Save message to database with the sender's nickname
+    cursor.execute('INSERT INTO messages (nickname, message) VALUES (?, ?)', (sender_nickname, message))
     conn.commit()
 
-
-
-
-# Handle individual client connections
-def handle(client):
-    while True:
-        try:
-            message = client.recv(1024).decode('ascii')
-            index = clients.index(client)
-            nickname = Nicknames[index]
-            Broadcast(message, nickname)
-        except:
-            index = clients.index(client)
-            clients.remove(client)
-            client.close()
-            nickname = Nicknames[index]
-            Broadcast(f'{nickname} has left the chat !!', 'Server')
-            Nicknames.remove(nickname)
-            break
-
-
-
-
 # Load the last few messages from the database
-def load_messages(client):
+def load_messages(client_socket):
     cursor.execute('SELECT nickname, message FROM messages ORDER BY id DESC LIMIT 20')
     messages = cursor.fetchall()
     for nickname, message in reversed(messages):
-        client.send(f"{nickname}: {message}".encode('ascii'))
+        client_socket.send(f"{nickname}: {message}".encode('ascii'))
 
-
-
-# Receive incoming connections and manage clients
-def receive():
+# Main server loop to handle connections and data
+def run_server():
+    print(f"Server is listening on {host}:{port}")
     while True:
-        client, address = server.accept()
-        print(f"Connected with {str(address)}")
-        client.send("NICK".encode('ascii'))
-        nickname = client.recv(1024).decode('ascii')
-        Nicknames.append(nickname)
-        clients.append(client)
+        # Use select to wait for readable sockets
+        readable, _, _ = select.select(sockets_list, [], [])
 
-        print(f'Nickname of the client is {nickname}!')
-        Broadcast(f'{nickname} joined the chat!', 'Server')
-        client.send('You are connected to the server!'.encode('ascii'))
+        for notified_socket in readable:
+            if notified_socket == server:
+                # Handle new connection
+                client_socket, client_address = server.accept()
+                print(f"Accepted new connection from {client_address}")
+                client_socket.setblocking(False)
+                sockets_list.append(client_socket)
+                clients[client_socket] = None  # Placeholder for the nickname
 
-        # Load recent messages for the newly connected client
-        load_messages(client)
+                client_socket.send("NICK".encode('ascii'))  # Ask for nickname
+                print(f"Sent NICK request to {client_address}")
 
-        thread = threading.Thread(target=handle, args=(client,))
-        thread.start()
+            else:
+                # Handle data from existing clients
+                try:
+                    message = notified_socket.recv(1024).decode('ascii')
+                    if not message:
+                        raise Exception("Empty message")
 
-print("Server is listening ......")
-receive()
+                    # If the client hasn't sent a nickname yet
+                    if clients[notified_socket] is None:
+                        print(f"Received nickname: {message}")
+                        nicknames[notified_socket] = message
+                        clients[notified_socket] = message  # Set nickname
+                        broadcast(f'{message} joined the chat!', notified_socket)
+                        load_messages(notified_socket)
+                    else:
+                        # Otherwise, broadcast the message to others
+                        print(f"Received message from {clients[notified_socket]}: {message}")
+                        broadcast(f"{clients[notified_socket]}: {message}", notified_socket)
+
+                except Exception as e:
+                    print(f"Error handling client: {e}")  # Debugging print
+                    # Remove the client on failure
+                    nickname = clients.pop(notified_socket, None)
+                    sockets_list.remove(notified_socket)
+                    notified_socket.close()
+                    if nickname:
+                        broadcast(f'{nickname} has left the chat.')
+
+run_server()

@@ -1,35 +1,42 @@
 import socket
-import threading 
+import select
+import sys
 
+# Choose a nickname for the user
+nickname = input("Choose a Nickname: ")
 
-Nickname = input("Choose a Nickname")
+# Create a client socket (IPv4 + TCP)
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect(('127.0.0.1', 55456))
+client.setblocking(False)  # Make the socket non-blocking
 
-client = socket.socket(socket.AF_INET,socket.SOCK_STREAM) 
-client.connect(('127.0.0.1',55456))
-
-
-def receive():
+# Main loop to handle sending and receiving messages
+def run_client():
     while True:
-        try:
-            message = client.recv(1024).decode('ascii')
-            if(message == 'NICK'):
-                client.send(Nickname.encode('ascii'))
+        # Use select to monitor stdin (keyboard input) and the client socket
+        sockets_list = [sys.stdin, client]
+        readable, _, _ = select.select(sockets_list, [], [])
+
+        for notified_socket in readable:
+            if notified_socket == client:
+                # Incoming message from the server
+                try:
+                    message = client.recv(1024).decode('ascii')
+                    if message == 'NICK':
+                        print("Server requested nickname, sending...")
+                        client.send(nickname.encode('ascii'))  # Send nickname when asked
+                        print(f"Sent nickname: {nickname}")
+                    else:
+                        print(message)  # Display the message from the server
+                except:
+                    print("An error occurred!")
+                    client.close()
+                    sys.exit()
+
             else:
-                print(message)
+                # User input (keyboard)
+                message = sys.stdin.readline().strip()
+                if message:
+                    client.send(f'{nickname}: {message}'.encode('ascii'))
 
-        except:
-            print("An error occured !")
-            client.close()
-            break
-
-def write():
-    while True:
-        message = f'{Nickname} : {input("")}'
-        client.send(message.encode('ascii'))
-
-
-receive_thread = threading.Thread(target=receive)
-receive_thread.start()
-
-write_thread = threading.Thread(target=write)
-write_thread.start()
+run_client()
