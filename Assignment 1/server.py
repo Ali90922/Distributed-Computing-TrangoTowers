@@ -16,6 +16,7 @@ server.listen()  # Server starts listening for incoming connections
 clients = []
 Nicknames = []
 
+
 # Connect to SQLite database (or create it if it doesn't exist)
 conn = sqlite3.connect('chat.db', check_same_thread=False)
 cursor = conn.cursor()
@@ -30,6 +31,8 @@ cursor.execute('''
 ''')
 conn.commit()
 
+
+
 # Broadcast function to send a message to all connected clients and save to database
 def Broadcast(message, nickname):
     for client in clients:
@@ -37,6 +40,9 @@ def Broadcast(message, nickname):
     # Save the message to the database
     cursor.execute('INSERT INTO messages (nickname, message) VALUES (?, ?)', (nickname, message))
     conn.commit()
+
+
+
 
 # Handle individual client connections
 def handle(client):
@@ -55,12 +61,17 @@ def handle(client):
             Nicknames.remove(nickname)
             break
 
+
+
+
 # Load the last few messages from the database
 def load_messages(client):
     cursor.execute('SELECT nickname, message FROM messages ORDER BY id DESC LIMIT 20')
     messages = cursor.fetchall()
     for nickname, message in reversed(messages):
         client.send(f"{nickname}: {message}".encode('ascii'))
+
+
 
 # Receive incoming connections and manage clients
 def receive():
