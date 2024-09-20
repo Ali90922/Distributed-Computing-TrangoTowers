@@ -1,0 +1,204 @@
+In your distributed computing course, especially when working with sockets in Python, you'll likely encounter several important methods that are used for creating, managing, and communicating between servers and clients over a network. Here's a list of the major methods related to socket programming:
+
+1. Socket Creation & Configuration
+socket()
+Creates a new socket object.
+Syntax: socket.socket(family, type)
+Example:
+python
+Copy code
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+Common families:
+socket.AF_INET – for IPv4 addresses.
+socket.AF_INET6 – for IPv6 addresses.
+Common types:
+socket.SOCK_STREAM – for TCP connections (reliable, connection-based).
+socket.SOCK_DGRAM – for UDP connections (unreliable, connectionless).
+settimeout()
+Sets a timeout on blocking socket operations (like accept() or recv()).
+Syntax: socket.settimeout(timeout_in_seconds)
+Example:
+python
+Copy code
+s.settimeout(10)  # Timeout after 10 seconds
+setsockopt()
+Sets options on a socket (such as enabling address reuse).
+Syntax: socket.setsockopt(level, option_name, value)
+Example:
+python
+Copy code
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+2. Binding & Listening (Server-side)
+bind()
+Binds the socket to an address and port, making it listen on that interface.
+Syntax: socket.bind((host, port))
+Example:
+python
+Copy code
+s.bind(('localhost', 12345))
+listen()
+Marks the socket as a server socket and starts listening for incoming connections.
+Syntax: socket.listen(backlog)
+Example:
+python
+Copy code
+s.listen(5)  # Max 5 pending connections
+accept()
+Accepts a new incoming connection from a client.
+Syntax: conn, addr = socket.accept()
+Example:
+python
+Copy code
+conn, addr = s.accept()
+print(f"Connected by {addr}")
+3. Connecting (Client-side)
+connect()
+Used by the client to connect to a remote server.
+Syntax: socket.connect((host, port))
+Example:
+python
+Copy code
+s.connect(('example.com', 12345))
+4. Data Transmission
+send()
+Sends data through the socket.
+Syntax: socket.send(bytes)
+Example:
+python
+Copy code
+s.send(b'Hello, World!')
+sendall()
+Sends all data through the socket, ensuring the entire message is delivered.
+Syntax: socket.sendall(bytes)
+Example:
+python
+Copy code
+s.sendall(b'Hello, complete message!')
+recv()
+Receives data from the socket.
+Syntax: data = socket.recv(buffer_size)
+Example:
+python
+Copy code
+data = s.recv(1024)  # Receive up to 1024 bytes
+recvfrom()
+Receives data from a socket (specifically useful for UDP).
+Syntax: data, addr = socket.recvfrom(buffer_size)
+Example:
+python
+Copy code
+data, addr = s.recvfrom(1024)
+5. Closing Sockets
+close()
+Closes the socket connection.
+Syntax: socket.close()
+Example:
+python
+Copy code
+s.close()
+6. Non-blocking & Monitoring Sockets
+setblocking()
+Sets the socket in blocking or non-blocking mode.
+Syntax: socket.setblocking(flag)
+Example:
+python
+Copy code
+s.setblocking(False)  # Non-blocking mode
+select()
+Monitors multiple sockets to see if they are ready for reading, writing, or exceptional conditions.
+Syntax: select.select(read_list, write_list, error_list, timeout)
+Example:
+python
+Copy code
+readable, writable, exceptional = select.select(inputs, [], [])
+7. Other Common Methods
+gethostname()
+Returns the current machine’s hostname.
+Example:
+python
+Copy code
+hostname = socket.gethostname()
+gethostbyname()
+Resolves a hostname to an IP address.
+Example:
+python
+Copy code
+ip = socket.gethostbyname('example.com')
+getpeername()
+Returns the remote address to which the socket is connected.
+Example:
+python
+Copy code
+addr = s.getpeername()
+Common Use-Cases for These Methods in Distributed Systems:
+Server Setup: A server would use socket(), bind(), and listen() to prepare to accept connections. When a client connects, the server uses accept() to handle that client.
+Client Setup: A client would use socket() and connect() to establish a connection with a server.
+Data Transfer: Both clients and servers use send(), sendall(), and recv() to exchange data over the network.
+Non-blocking Communication: To handle multiple clients or to avoid waiting indefinitely, the select() method or setblocking(False) would allow for non-blocking or multiplexed communication.
+Example of How These Methods Come Together:
+Here’s a simple example of how a server and a client would communicate using sockets:
+
+Server:
+
+python
+Copy code
+import socket
+
+# Create a TCP/IP socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+# Bind the socket to the address and port
+s.bind(('localhost', 12345))
+
+# Listen for incoming connections
+s.listen(5)
+
+# Accept a connection
+conn, addr = s.accept()
+print(f"Connected by {addr}")
+
+# Receive data
+data = conn.recv(1024)
+print(f"Received {data}")
+
+# Send data back
+conn.sendall(b'Hello, Client!')
+
+# Close the connection
+conn.close()
+s.close()
+Client:
+
+python
+Copy code
+import socket
+
+# Create a TCP/IP socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# Connect to the server
+s.connect(('localhost', 12345))
+
+# Send data
+s.sendall(b'Hello, Server!')
+
+# Receive response
+data = s.recv(1024)
+print(f"Received {data}")
+
+# Close the connection
+s.close()
+In your distributed computing course, you’ll likely explore how these methods fit together for more complex systems, such as building peer-to-peer architectures or client-server models with threading, concurrency, or non-blocking I/O.
+
+
+
+
+
+
+
+
+
+
+ChatGPT can make mistakes. Check important info.
+
