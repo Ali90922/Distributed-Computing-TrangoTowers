@@ -23,9 +23,7 @@ def run_client():
                 try:
                     message = client.recv(1024).decode('ascii')
                     if message == 'NICK':
-                        print("Server requested nickname, sending...")
                         client.send(nickname.encode('ascii'))  # Send nickname when asked
-                        print(f"Sent nickname: {nickname}")
                     else:
                         print(message)  # Display the message from the server
                 except:
