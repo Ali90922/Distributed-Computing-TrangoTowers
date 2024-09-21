@@ -10,6 +10,10 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(('127.0.0.1', 55456))
 client.setblocking(False)  # Make the socket non-blocking
 
+# Display the prompt with the nickname immediately after the nickname is chosen
+sys.stdout.write(f'{nickname}: ')
+sys.stdout.flush()
+
 # Main loop to handle sending and receiving messages
 def run_client():
     while True:
@@ -25,16 +29,23 @@ def run_client():
                     if message == 'NICK':
                         client.send(nickname.encode('ascii'))  # Send nickname when asked
                     else:
-                        print(message)  # Display the message from the server
+                        print(f'\n{message}')  # Display the message from the server with a newline
+                        sys.stdout.write(f'{nickname}: ')  # Re-display the input prompt after incoming message
+                        sys.stdout.flush()
                 except:
                     print("An error occurred!")
                     client.close()
                     sys.exit()
 
             else:
-                # User input (keyboard)
+                # Show the prompt with the nickname and let the user type their message
                 message = sys.stdin.readline().strip()
                 if message:
+                    # Send the message as is
                     client.send(f'{nickname}: {message}'.encode('ascii'))
+
+                    # Show the prompt again after sending the message
+                    sys.stdout.write(f'{nickname}: ')
+                    sys.stdout.flush()
 
 run_client()
