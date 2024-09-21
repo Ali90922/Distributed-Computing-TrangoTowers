@@ -21,7 +21,7 @@ def run_client():
             if notified_socket == client:
                 # Incoming message from the server
                 try:
-                    message = client.recv(1024).decode('ascii')
+                    message = client.recv(1024).decode('ascii').strip()
                     if message == 'NICK':
                         client.send(nickname.encode('ascii'))  # Send nickname when asked
                     else:

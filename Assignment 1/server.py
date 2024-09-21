@@ -33,20 +33,13 @@ sockets_list = [server]
 clients = {}
 nicknames = {}
 
-
-
-
-
-
-
-
 # Broadcast message to all connected clients and save to the database
 def broadcast(message, sender_socket=None):
     sender_nickname = nicknames.get(sender_socket, "Unknown")  # Get the nickname associated with the socket
     for client_socket in clients.keys():
         if client_socket != sender_socket:  # Don't send the message back to the sender
             try:
-                client_socket.send(message.encode('ascii'))
+                client_socket.send((message + "\n").encode('ascii'))  # Ensure each message ends with a newline
             except:
                 client_socket.close()
                 sockets_list.remove(client_socket)
@@ -56,25 +49,12 @@ def broadcast(message, sender_socket=None):
     cursor.execute('INSERT INTO messages (nickname, message) VALUES (?, ?)', (sender_nickname, message))
     conn.commit()
 
-
-
-
-
-
-
-
 # Load the last few messages from the database
 def load_messages(client_socket):
     cursor.execute('SELECT nickname, message FROM messages ORDER BY id DESC LIMIT 20')
     messages = cursor.fetchall()
     for nickname, message in reversed(messages):
-        client_socket.send(f"{nickname}: {message}".encode('ascii'))
-
-
-
-
-
-
+        client_socket.send(f"{nickname}: {message}\n".encode('ascii'))  # Ensure each message ends with a newline
 
 # Main server loop to handle connections and data
 def run_server():
@@ -91,12 +71,12 @@ def run_server():
                 sockets_list.append(client_socket)
                 clients[client_socket] = None  # Placeholder for the nickname
 
-                client_socket.send("NICK".encode('ascii'))  # Ask for nickname
+                client_socket.send("NICK\n".encode('ascii'))  # Ask for nickname
 
             else:
                 # Handle data from existing clients
                 try:
-                    message = notified_socket.recv(1024).decode('ascii')
+                    message = notified_socket.recv(1024).decode('ascii').strip()
                     if not message:
                         raise Exception("Empty message")
 
@@ -117,13 +97,5 @@ def run_server():
                     notified_socket.close()
                     if nickname:
                         broadcast(f'{nickname} has left the chat.')
-
-
-
-
-
-
-
-
 
 run_server()
