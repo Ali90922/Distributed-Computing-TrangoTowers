@@ -34,6 +34,7 @@ clients = {}
 nicknames = {}
 
 # Broadcast message to all connected clients and save to the database
+# Broadcast message to all connected clients and save to the database
 def broadcast(message, sender_socket=None):
     sender_nickname = nicknames.get(sender_socket, "Unknown")  # Get the nickname associated with the socket
     for client_socket in clients.keys():
@@ -48,6 +49,8 @@ def broadcast(message, sender_socket=None):
     # Save message to database with the sender's nickname
     cursor.execute('INSERT INTO messages (nickname, message) VALUES (?, ?)', (sender_nickname, message))
     conn.commit()
+
+
 
 # Load the last few messages from the database
 def load_messages(client_socket):
