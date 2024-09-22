@@ -1,0 +1,4 @@
+python modifiedServer.py > performance_log.txt
+
+
+^^ Command to run to save the console output to performance_log.txt file 
