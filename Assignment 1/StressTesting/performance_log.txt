@@ -1,0 +1,22 @@
+Server is listening on 127.0.0.1:55456
+Messages processed: 0, Elapsed time: 5.01s, Messages per second: 0.00
+Messages processed: 0, Elapsed time: 5.00s, Messages per second: 0.00
+Messages processed: 0, Elapsed time: 5.01s, Messages per second: 0.00
+Messages processed: 2, Elapsed time: 5.00s, Messages per second: 0.40
+Messages processed: 0, Elapsed time: 5.00s, Messages per second: 0.00
+Messages processed: 0, Elapsed time: 5.01s, Messages per second: 0.00
+Messages processed: 0, Elapsed time: 5.01s, Messages per second: 0.00
+Messages processed: 0, Elapsed time: 5.01s, Messages per second: 0.00
+Messages processed: 1, Elapsed time: 5.01s, Messages per second: 0.20
+Messages processed: 1, Elapsed time: 5.00s, Messages per second: 0.20
+Messages processed: 1, Elapsed time: 5.00s, Messages per second: 0.20
+Messages processed: 1, Elapsed time: 5.00s, Messages per second: 0.20
+Messages processed: 4, Elapsed time: 5.00s, Messages per second: 0.80
+Messages processed: 18, Elapsed time: 5.00s, Messages per second: 3.60
+Messages processed: 6, Elapsed time: 5.01s, Messages per second: 1.20
+Messages processed: 1, Elapsed time: 5.01s, Messages per second: 0.20
+Messages processed: 0, Elapsed time: 5.00s, Messages per second: 0.00
+Messages processed: 0, Elapsed time: 5.00s, Messages per second: 0.00
+Messages processed: 109, Elapsed time: 5.00s, Messages per second: 21.80
+Messages processed: 32, Elapsed time: 5.00s, Messages per second: 6.40
+Messages processed: 2, Elapsed time: 5.01s, Messages per second: 0.40
