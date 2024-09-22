@@ -2,3 +2,9 @@ python modifiedServer.py > performance_log.txt
 
 
 ^^ Command to run to save the console output to performance_log.txt file 
+
+
+
+
+No real need to run the above command, just need to run : python modifiedServer.py
+The server statistics will get printed to the server's terminal not to the final now !
