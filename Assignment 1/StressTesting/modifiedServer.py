@@ -55,11 +55,17 @@ client_stats = {}  # Key: client_socket, Value: {'sent': int, 'received': int}
 process = psutil.Process()
 net_counters = psutil.net_io_counters()
 
+# Initialize cumulative stats for averages
+total_cpu_usage = 0.0
+total_memory_usage = 0.0
+total_bytes_sent = 0
+total_bytes_recv = 0
+interval_count = 0
+
 # Broadcast message to all connected clients and save to the database
 def broadcast(message, sender_socket=None):
     global message_count, total_message_count
     sender_nickname = nicknames.get(sender_socket, "Unknown")  # Get the nickname associated with the socket
-    message_timestamp = time.time()  # Timestamp when message is received
 
     # Increment message counts safely
     with lock:
@@ -109,6 +115,7 @@ def load_messages(client_socket):
 # Function to log performance
 def log_performance():
     global message_count, start_time, net_counters
+    global total_cpu_usage, total_memory_usage, total_bytes_sent, total_bytes_recv, interval_count
     interval = 5  # Log every 5 seconds
     while running:
         time.sleep(interval)
@@ -130,6 +137,13 @@ def log_performance():
                 net_counters = new_net_counters  # Update counters
                 bytes_sent_mb = bytes_sent / (1024 * 1024)  # Convert to MB
                 bytes_recv_mb = bytes_recv / (1024 * 1024)  # Convert to MB
+
+                # Accumulate totals for averages
+                total_cpu_usage += cpu_usage
+                total_memory_usage += memory_usage
+                total_bytes_sent += bytes_sent
+                total_bytes_recv += bytes_recv
+                interval_count += 1
 
                 print(f"\n[Performance Log]")
                 print(f"Time Interval: {elapsed_time:.2f}s")
@@ -239,11 +253,28 @@ def run_server():
         avg_mps = total_message_count / total_elapsed_time
     else:
         avg_mps = 0
+
+    # Calculate average CPU and memory usage, and network usage
+    if interval_count > 0:
+        avg_cpu_usage = total_cpu_usage / interval_count
+        avg_memory_usage = total_memory_usage / interval_count
+        avg_bytes_sent_mb = (total_bytes_sent / interval_count) / (1024 * 1024)  # Convert to MB
+        avg_bytes_recv_mb = (total_bytes_recv / interval_count) / (1024 * 1024)  # Convert to MB
+    else:
+        avg_cpu_usage = 0
+        avg_memory_usage = 0
+        avg_bytes_sent_mb = 0
+        avg_bytes_recv_mb = 0
+
     print(f"\nServer shutting down.")
     print(f"Total messages processed: {total_message_count}")
     print(f"Total elapsed time: {total_elapsed_time:.2f}s")
     print(f"Average messages per second: {avg_mps:.2f}")
     print(f"Maximum clients connected: {len(client_stats)}")
+    print(f"Average CPU Usage: {avg_cpu_usage:.2f}%")
+    print(f"Average Memory Usage: {avg_memory_usage:.2f} MB")
+    print(f"Average Bytes Sent per Interval: {avg_bytes_sent_mb:.2f} MB")
+    print(f"Average Bytes Received per Interval: {avg_bytes_recv_mb:.2f} MB")
 
     # Close all client sockets
     for client_socket in clients.keys():
