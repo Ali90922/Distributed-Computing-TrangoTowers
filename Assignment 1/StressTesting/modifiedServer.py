@@ -3,6 +3,7 @@ import sqlite3
 import select
 import time
 import threading
+import psutil  # Added for CPU, Memory, and Network usage monitoring
 
 host = '127.0.0.1'
 port = 55456
@@ -47,20 +48,35 @@ lock = threading.Lock()
 # Running flag to control the server loop
 running = True
 
+# Messages sent and received per client
+client_stats = {}  # Key: client_socket, Value: {'sent': int, 'received': int}
+
+# Initialize psutil process and network counters
+process = psutil.Process()
+net_counters = psutil.net_io_counters()
+
 # Broadcast message to all connected clients and save to the database
 def broadcast(message, sender_socket=None):
     global message_count, total_message_count
     sender_nickname = nicknames.get(sender_socket, "Unknown")  # Get the nickname associated with the socket
+    message_timestamp = time.time()  # Timestamp when message is received
 
     # Increment message counts safely
     with lock:
         message_count += 1
         total_message_count += 1
+        # Update sender's sent message count
+        if sender_socket in client_stats:
+            client_stats[sender_socket]['sent'] += 1
 
     for client_socket in list(clients.keys()):
         if client_socket != sender_socket:  # Don't send the message back to the sender
             try:
                 client_socket.send((message + "\n").encode('ascii'))  # Ensure each message ends with a newline
+                # Update receiver's received message count
+                with lock:
+                    if client_socket in client_stats:
+                        client_stats[client_socket]['received'] += 1
             except:
                 client_socket.close()
                 sockets_list.remove(client_socket)
@@ -79,6 +95,10 @@ def load_messages(client_socket):
     for nickname, message in reversed(messages):
         try:
             client_socket.send(f"{nickname}: {message}\n".encode('ascii'))  # Ensure each message ends with a newline
+            # Update client's received message count
+            with lock:
+                if client_socket in client_stats:
+                    client_stats[client_socket]['received'] += 1
         except:
             client_socket.close()
             sockets_list.remove(client_socket)
@@ -88,18 +108,52 @@ def load_messages(client_socket):
 
 # Function to log performance
 def log_performance():
-    global message_count, start_time
+    global message_count, start_time, net_counters
+    interval = 5  # Log every 5 seconds
     while running:
-        time.sleep(5)  # Log every 5 seconds
+        time.sleep(interval)
         with lock:
             elapsed_time = time.time() - start_time
             if elapsed_time > 0:
                 mps = message_count / elapsed_time
                 client_count = len(clients)
-                print(f"Messages processed: {message_count}, Elapsed time: {elapsed_time:.2f}s, Messages per second: {mps:.2f}, Clients connected: {client_count}")
+
+                # Collect CPU and memory usage
+                cpu_usage = process.cpu_percent(interval=None)
+                memory_info = process.memory_info()
+                memory_usage = memory_info.rss / (1024 * 1024)  # Convert to MB
+
+                # Calculate network usage
+                new_net_counters = psutil.net_io_counters()
+                bytes_sent = new_net_counters.bytes_sent - net_counters.bytes_sent
+                bytes_recv = new_net_counters.bytes_recv - net_counters.bytes_recv
+                net_counters = new_net_counters  # Update counters
+                bytes_sent_mb = bytes_sent / (1024 * 1024)  # Convert to MB
+                bytes_recv_mb = bytes_recv / (1024 * 1024)  # Convert to MB
+
+                print(f"\n[Performance Log]")
+                print(f"Time Interval: {elapsed_time:.2f}s")
+                print(f"Messages processed in interval: {message_count}")
+                print(f"Messages per second: {mps:.2f}")
+                print(f"Total clients connected: {client_count}")
+                print(f"CPU Usage: {cpu_usage:.2f}%")
+                print(f"Memory Usage: {memory_usage:.2f} MB")
+                print(f"Bytes sent in interval: {bytes_sent_mb:.2f} MB")
+                print(f"Bytes received in interval: {bytes_recv_mb:.2f} MB")
+                print(f"Clients Stats:")
+                for client_socket, stats in client_stats.items():
+                    nickname = clients.get(client_socket, "Unknown")
+                    sent = stats['sent']
+                    received = stats['received']
+                    print(f" - {nickname}: Sent: {sent}, Received: {received}")
+                print("-" * 50)
                 # Reset counters
                 message_count = 0
                 start_time = time.time()
+                # Reset client stats for interval
+                for stats in client_stats.values():
+                    stats['sent'] = 0
+                    stats['received'] = 0
 
 # Function to listen for server commands (e.g., 'quit')
 def listen_for_commands():
@@ -141,6 +195,8 @@ def run_server():
                     client_socket.setblocking(False)
                     sockets_list.append(client_socket)
                     clients[client_socket] = None  # Placeholder for the nickname
+                    # Initialize client stats
+                    client_stats[client_socket] = {'sent': 0, 'received': 0}
 
                     client_socket.send("NICK\n".encode('ascii'))  # Ask for nickname
                 except:
@@ -170,6 +226,8 @@ def run_server():
                     notified_socket.close()
                     if nickname:
                         broadcast(f'{nickname} has left the chat.')
+                    # Remove client stats
+                    client_stats.pop(notified_socket, None)
 
     # Wait for threads to finish
     performance_thread.join()
@@ -185,6 +243,7 @@ def run_server():
     print(f"Total messages processed: {total_message_count}")
     print(f"Total elapsed time: {total_elapsed_time:.2f}s")
     print(f"Average messages per second: {avg_mps:.2f}")
+    print(f"Maximum clients connected: {len(client_stats)}")
 
     # Close all client sockets
     for client_socket in clients.keys():
