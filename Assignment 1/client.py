@@ -72,3 +72,4 @@ def run_client():
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, orig_settings)
 
 run_client()
+# study the protocol
