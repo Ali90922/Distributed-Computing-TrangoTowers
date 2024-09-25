@@ -7,6 +7,9 @@ import tty
 # Choose a nickname for the user
 nickname = input("Choose a Nickname: ")
 
+
+
+
 # Create a client socket (IPv4 + TCP)
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(('127.0.0.1', 55456))
@@ -18,6 +21,11 @@ sys.stdout.flush()
 
 # Save the original terminal settings
 orig_settings = termios.tcgetattr(sys.stdin)
+
+
+
+
+
 
 def run_client():
     partial_message = ''  # Store what the user is currently typing
