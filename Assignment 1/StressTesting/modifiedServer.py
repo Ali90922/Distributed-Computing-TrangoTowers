@@ -2,8 +2,8 @@ import socket
 import sqlite3
 import select
 import time
-import threading
-import psutil  # Added for CPU, Memory, and Network usage monitoring
+import sys
+import psutil
 
 host = '127.0.0.1'
 port = 55456
@@ -43,7 +43,6 @@ start_time = time.time()
 # Total performance tracking variables
 total_message_count = 0
 server_start_time = time.time()
-lock = threading.Lock()
 
 # Running flag to control the server loop
 running = True
@@ -67,28 +66,25 @@ def broadcast(message, sender_socket=None):
     global message_count, total_message_count
     sender_nickname = nicknames.get(sender_socket, "Unknown")  # Get the nickname associated with the socket
 
-    # Increment message counts safely
-    with lock:
-        message_count += 1
-        total_message_count += 1
-        # Update sender's sent message count
-        if sender_socket in client_stats:
-            client_stats[sender_socket]['sent'] += 1
+    # Increment message counts
+    message_count += 1
+    total_message_count += 1
+    # Update sender's sent message count
+    if sender_socket in client_stats:
+        client_stats[sender_socket]['sent'] += 1
 
     for client_socket in list(clients.keys()):
-        if client_socket != sender_socket:  # Don't send the message back to the sender
-            try:
-                client_socket.send((message + "\n").encode('ascii'))  # Ensure each message ends with a newline
-                # Update receiver's received message count
-                with lock:
-                    if client_socket in client_stats:
-                        client_stats[client_socket]['received'] += 1
-            except:
-                client_socket.close()
-                sockets_list.remove(client_socket)
-                del clients[client_socket]
-                nickname = nicknames.pop(client_socket, "Unknown")
-                broadcast(f'{nickname} has left the chat.')
+        try:
+            client_socket.send((message + "\n").encode('ascii'))  # Ensure each message ends with a newline
+            # Update receiver's received message count
+            if client_socket != sender_socket and client_socket in client_stats:
+                client_stats[client_socket]['received'] += 1
+        except:
+            client_socket.close()
+            sockets_list.remove(client_socket)
+            del clients[client_socket]
+            nickname = nicknames.pop(client_socket, "Unknown")
+            broadcast(f'{nickname} has left the chat.')
 
     # Save message to database with the sender's nickname
     cursor.execute('INSERT INTO messages (nickname, message) VALUES (?, ?)', (sender_nickname, message))
@@ -102,9 +98,8 @@ def load_messages(client_socket):
         try:
             client_socket.send(f"{nickname}: {message}\n".encode('ascii'))  # Ensure each message ends with a newline
             # Update client's received message count
-            with lock:
-                if client_socket in client_stats:
-                    client_stats[client_socket]['received'] += 1
+            if client_socket in client_stats:
+                client_stats[client_socket]['received'] += 1
         except:
             client_socket.close()
             sockets_list.remove(client_socket)
@@ -112,14 +107,84 @@ def load_messages(client_socket):
             nickname = nicknames.pop(client_socket, "Unknown")
             broadcast(f'{nickname} has left the chat.')
 
-# Function to log performance
-def log_performance():
-    global message_count, start_time, net_counters
-    global total_cpu_usage, total_memory_usage, total_bytes_sent, total_bytes_recv, interval_count
+# Main server loop to handle connections, data, and performance logging
+def run_server():
+    global running, message_count, start_time, total_cpu_usage, total_memory_usage
+    global total_bytes_sent, total_bytes_recv, interval_count, total_message_count, net_counters
+
+    print(f"Server is listening on {host}:{port}")
+
     interval = 5  # Log every 5 seconds
+    last_log_time = time.time()
+
     while running:
-        time.sleep(interval)
-        with lock:
+        # Calculate timeout for select
+        time_until_log = last_log_time + interval - time.time()
+        if time_until_log < 0:
+            time_until_log = 0
+        timeout = time_until_log
+
+        # Use select to wait for readable sockets and stdin
+        try:
+            # Include sys.stdin in the list of sockets to monitor
+            read_sockets = sockets_list + [sys.stdin]
+            readable, _, _ = select.select(read_sockets, [], [], timeout)
+        except Exception as e:
+            print(f"Select error: {e}")
+            break  # Exit the loop if select fails
+
+        for notified_socket in readable:
+            if notified_socket == server:
+                # Handle new connection
+                try:
+                    client_socket, client_address = server.accept()
+                    client_socket.setblocking(False)
+                    sockets_list.append(client_socket)
+                    clients[client_socket] = None  # Placeholder for the nickname
+                    # Initialize client stats
+                    client_stats[client_socket] = {'sent': 0, 'received': 0}
+
+                    client_socket.send("NICK\n".encode('ascii'))  # Ask for nickname
+                except Exception as e:
+                    print(f"Error accepting new connection: {e}")
+            elif notified_socket == sys.stdin:
+                # Handle server commands
+                command = sys.stdin.readline()
+                if command.strip().lower() == 'quit':
+                    print("Shutdown command received. Shutting down the server.")
+                    running = False
+                    # Close the server socket to unblock accept()
+                    server.close()
+                    break
+            else:
+                # Handle data from existing clients
+                try:
+                    message = notified_socket.recv(1024).decode('ascii').strip()
+                    if not message:
+                        # Connection closed
+                        raise Exception("Empty message")
+                    # If the client hasn't sent a nickname yet
+                    if clients[notified_socket] is None:
+                        nicknames[notified_socket] = message
+                        clients[notified_socket] = message  # Set nickname
+                        broadcast(f'{message} joined the chat!', notified_socket)
+                        load_messages(notified_socket)
+                    else:
+                        # Otherwise, broadcast the message to others
+                        broadcast(f"{clients[notified_socket]}: {message}", notified_socket)
+                except Exception as e:
+                    # Remove the client on failure
+                    nickname = clients.pop(notified_socket, None)
+                    sockets_list.remove(notified_socket)
+                    notified_socket.close()
+                    if nickname:
+                        broadcast(f'{nickname} has left the chat.')
+                    # Remove client stats
+                    client_stats.pop(notified_socket, None)
+
+        # Check if it's time to log performance
+        if time.time() - last_log_time >= interval:
+            # Perform logging
             elapsed_time = time.time() - start_time
             if elapsed_time > 0:
                 mps = message_count / elapsed_time
@@ -164,88 +229,11 @@ def log_performance():
                 # Reset counters
                 message_count = 0
                 start_time = time.time()
+                last_log_time = time.time()
                 # Reset client stats for interval
                 for stats in client_stats.values():
                     stats['sent'] = 0
                     stats['received'] = 0
-
-# Function to listen for server commands (e.g., 'quit')
-def listen_for_commands():
-    global running
-    while running:
-        command = input()
-        if command.strip().lower() == 'quit':
-            print("Shutdown command received. Shutting down the server.")
-            running = False
-            # Close the server socket to unblock accept()
-            server.close()
-            break
-
-# Main server loop to handle connections and data
-def run_server():
-    global running
-    print(f"Server is listening on {host}:{port}")
-
-    # Start the performance logging thread
-    performance_thread = threading.Thread(target=log_performance)
-    performance_thread.start()
-
-    # Start the command listening thread
-    command_thread = threading.Thread(target=listen_for_commands)
-    command_thread.start()
-
-    while running:
-        # Use select to wait for readable sockets
-        try:
-            readable, _, _ = select.select(sockets_list, [], [], 1)
-        except Exception as e:
-            break  # Exit the loop if select fails, likely due to server socket being closed
-
-        for notified_socket in readable:
-            if notified_socket == server:
-                # Handle new connection
-                try:
-                    client_socket, client_address = server.accept()
-                    client_socket.setblocking(False)
-                    sockets_list.append(client_socket)
-                    clients[client_socket] = None  # Placeholder for the nickname
-                    # Initialize client stats
-                    client_stats[client_socket] = {'sent': 0, 'received': 0}
-
-                    client_socket.send("NICK\n".encode('ascii'))  # Ask for nickname
-                except:
-                    pass  # If server socket is closed, accept() will fail
-
-            else:
-                # Handle data from existing clients
-                try:
-                    message = notified_socket.recv(1024).decode('ascii').strip()
-                    if not message:
-                        raise Exception("Empty message")
-
-                    # If the client hasn't sent a nickname yet
-                    if clients[notified_socket] is None:
-                        nicknames[notified_socket] = message
-                        clients[notified_socket] = message  # Set nickname
-                        broadcast(f'{message} joined the chat!', notified_socket)
-                        load_messages(notified_socket)
-                    else:
-                        # Otherwise, broadcast the message to others
-                        broadcast(f"{clients[notified_socket]}: {message}", notified_socket)
-
-                except:
-                    # Remove the client on failure
-                    nickname = clients.pop(notified_socket, None)
-                    sockets_list.remove(notified_socket)
-                    notified_socket.close()
-                    if nickname:
-                        broadcast(f'{nickname} has left the chat.')
-                    # Remove client stats
-                    client_stats.pop(notified_socket, None)
-
-    # Wait for threads to finish
-    performance_thread.join()
-    command_thread.join()
 
     # Calculate total performance summary
     total_elapsed_time = time.time() - server_start_time

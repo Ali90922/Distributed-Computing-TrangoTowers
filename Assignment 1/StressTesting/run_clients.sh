@@ -18,15 +18,6 @@ for ((i = 1; i <= num_clients; i++)); do
     run_client $i
 done
 
-# Let the clients run for 5 minutes (300 seconds) before killing them
-sleep 300
-
-# Kill all clients after test period
-echo "Stopping clients..."
-pkill -f "$client_script"
-
-echo "Test complete!"
-
 
 
 # Command to make to script executeble on my AWS machine : chmod +x run_clients.sh
