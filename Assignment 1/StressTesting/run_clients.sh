@@ -8,14 +8,14 @@ client_script="SpamClient.py"
 
 # Function to run a single client
 run_client() {
-    python3 "$client_script" &
+    python3 "$client_script" "Client_$1" &  # Pass a unique nickname to each client
 }
 
 # Launch the specified number of clients
 echo "Running with $num_clients clients..."
 
 for ((i = 1; i <= num_clients; i++)); do
-    run_client
+    run_client $i
 done
 
 # Let the clients run for 5 minutes (300 seconds) before killing them
@@ -26,8 +26,6 @@ echo "Stopping clients..."
 pkill -f "$client_script"
 
 echo "Test complete!"
-
-
 
 
 

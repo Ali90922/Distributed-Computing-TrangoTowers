@@ -3,17 +3,17 @@ import select
 import sys
 import time
 
-# Choose a nickname for the user
-nickname = input("Choose a Nickname: ")
+# Check if a nickname is provided via command line arguments
+if len(sys.argv) < 2:
+    print("Usage: python3 SpamClient.py <nickname>")
+    sys.exit()
+
+nickname = sys.argv[1]  # Use the first command-line argument as the nickname
 
 # Create a client socket (IPv4 + TCP)
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(('127.0.0.1', 55456))
 client.setblocking(False)  # Make the socket non-blocking
-
-# Main loop to handle sending and receiving messages
-
-
 
 # Main loop to handle sending and receiving messages
 def run_spam_client():
@@ -58,3 +58,8 @@ def run_spam_client():
 
 
 run_spam_client()
+
+
+
+
+# This version of the script is meant to be run with the bash scripting file !
