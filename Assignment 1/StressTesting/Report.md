@@ -16,3 +16,39 @@ Average Bytes Sent per Interval: 16.41 MB
 Average Bytes Received per Interval: 9.60 MB
 
 2 Client Stats :
+Shutdown command received. Shutting down the server.
+Server shutting down.
+Total messages processed: 58723
+Total elapsed time: 309.45s
+Average messages per second: 189.76
+Maximum clients connected: 2
+Average CPU Usage: 5.61%
+Average Memory Usage: 15.33 MB
+Average Bytes Sent per Interval: 32.82 MB
+Average Bytes Received per Interval: 19.17 MB
+
+5 Client Stats:
+Shutdown command received. Shutting down the server.
+Server shutting down.
+Total messages processed: 62252
+Total elapsed time: 300.46s
+Average messages per second: 207.19
+Maximum clients connected: 5
+Average CPU Usage: 5.45%
+Average Memory Usage: 15.42 MB
+Average Bytes Sent per Interval: 36.63 MB
+Average Bytes Received per Interval: 21.12 MB
+
+10 Client Stats:
+Shutdown command received. Shutting down the server.
+
+Server shutting down.
+Total messages processed: 60905
+Total elapsed time: 300.97s
+Average messages per second: 202.37
+Maximum clients connected: 10
+Average CPU Usage: 5.51%
+Average Memory Usage: 15.68 MB
+Average Bytes Sent per Interval: 38.53 MB
+Average Bytes Received per Interval: 20.92 MB
+[nawaza1@kingfisher StressTesting]>
