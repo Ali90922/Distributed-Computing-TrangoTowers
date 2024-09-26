@@ -3,6 +3,7 @@ import select
 import time
 import sys
 import psutil
+import errno
 
 host = '127.0.0.1'  # Update to the public IP of the server if needed
 port = 55456
@@ -49,6 +50,9 @@ total_bytes_recv = 0
 interval_count = 0
 
 # Broadcast message to all connected clients
+import socket
+import errno
+
 def broadcast(message, sender_socket=None):
     global message_count, total_message_count
     sender_nickname = nicknames.get(sender_socket, "Unknown")  # Get the nickname associated with the socket
@@ -56,34 +60,48 @@ def broadcast(message, sender_socket=None):
     # Increment message counts
     message_count += 1
     total_message_count += 1
-    # Update sender's sent message count
-    if sender_socket in client_stats:
-        client_stats[sender_socket]['sent'] += 1
 
     for client_socket in list(clients.keys()):
+        # Don't send the message back to the sender
+        if client_socket == sender_socket:
+            continue
+
         try:
-            client_socket.send((message + "\n").encode('ascii'))  # Ensure each message ends with a newline
-            # Update receiver's received message count
-            if client_socket != sender_socket and client_socket in client_stats:
-                client_stats[client_socket]['received'] += 1
-        except Exception as e:
-            print(f"Error sending message to {clients.get(client_socket, 'Unknown')}: {e}")
-            # Remove the client on failure
-            if client_socket in sockets_list:
-                sockets_list.remove(client_socket)
-            if client_socket in clients:
-                nickname = clients.pop(client_socket)
-                print(f"Client {nickname} has been removed.")
-            if client_socket in nicknames:
-                nicknames.pop(client_socket)
+            # Attempt to send the message
+            client_socket.send((message + "\n").encode('ascii'))
+            
+            # Update the stats for received messages
             if client_socket in client_stats:
-                client_stats.pop(client_socket)
-            client_socket.close()
-            # Avoid recursive call to broadcast
-            # Optionally, notify remaining clients
-            leave_message = f'{nickname} has left the chat.'
-            print(leave_message)
-            # You can choose to queue leave messages to be sent later to avoid recursion
+                client_stats[client_socket]['received'] += 1
+        
+        except socket.error as e:
+            # If the socket buffer is full, skip and try later
+            if e.errno == errno.EAGAIN or e.errno == errno.EWOULDBLOCK:
+                print(f"Socket buffer full for {clients.get(client_socket, 'Unknown')}. Will retry later.")
+                continue  # Skip sending to this client now and try again later
+            
+            # For other errors, handle disconnection
+            else:
+                print(f"Error sending message to {clients.get(client_socket, 'Unknown')}: {e}")
+                remove_client(client_socket)  # Remove and clean up disconnected client
+
+def remove_client(client_socket):
+    """Function to remove a client and clean up its resources."""
+    if client_socket in sockets_list:
+        sockets_list.remove(client_socket)
+    if client_socket in clients:
+        nickname = clients.pop(client_socket)
+        print(f"Client {nickname} has been removed.")
+    if client_socket in nicknames:
+        nicknames.pop(client_socket)
+    if client_socket in client_stats:
+        client_stats.pop(client_socket)
+    client_socket.close()
+
+    # Optionally, notify other clients of the disconnection
+    leave_message = f'{nickname} has left the chat.'
+    broadcast(leave_message)
+
 
 # Main server loop to handle connections, data, and performance logging
 def run_server():
@@ -97,7 +115,7 @@ def run_server():
 
     while running:
         time_until_log = last_log_time + interval - time.time()
-        timeout = max(0, time_until_log)
+        timeout = 0.5
 
         try:
             read_sockets = sockets_list + [sys.stdin]
