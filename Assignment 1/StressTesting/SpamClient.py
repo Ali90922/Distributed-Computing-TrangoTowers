@@ -14,14 +14,14 @@ nickname = sys.argv[1]  # Use the first command-line argument as the nickname
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # Set the buffer size (adjust the size in bytes to what you need)
-send_buffer_size = 4096  # You can adjust this to a higher value
-recv_buffer_size = 4096  # You can adjust this to a higher value
+send_buffer_size = 8192  # You can adjust this to a higher value
+recv_buffer_size = 16384  # You can adjust this to a higher value
 
 # Set the socket options for the send and receive buffer sizes
 client.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, send_buffer_size)
 client.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, recv_buffer_size)
 
-client.connect(('127.0.0.1', 55456))
+client.connect(('130.179.28.122', 55456))
 client.setblocking(False)  # Make the socket non-blocking
 
 # Main loop to handle sending and receiving messages
@@ -75,6 +75,6 @@ def run_spam_client():
             sys.exit()
 
         counter += 1
-        time.sleep(0.30)  # Slowing down the spam rate to avoid overwhelming the server
+        time.sleep(0.55)  # Slowing down the spam rate to avoid overwhelming the server
 
 run_spam_client()
