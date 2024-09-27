@@ -5,7 +5,7 @@ import sys
 import psutil
 import errno
 
-host = '127.0.0.1'  # Update to the public IP of the server if needed
+host = '0.0.0.0'  # Update to the public IP of the server if needed
 port = 55456
 
 # Create a server socket (IPv4 + TCP)
