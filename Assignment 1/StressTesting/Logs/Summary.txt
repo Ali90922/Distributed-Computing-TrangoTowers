@@ -1,0 +1,92 @@
+
+
+200 Clients :
+[Final Performance Summary]
+Total messages processed: 633691
+Total elapsed time: 300.88s
+Average messages per second: 2106.14
+Average CPU Usage: 48.55%
+Average Memory Usage: 12.75 MB
+Average Bytes Sent per Interval: 311.56 MB
+Average Bytes Received per Interval: 11.47 MB
+Average Packets Sent per Interval: 602538.67
+Average Packets Received per Interval: 160070.07
+Average CPU Frequency: 1620.24 MHz
+[nawaza1@kingfisher StressTesting]>
+
+
+175 Clients :
+[Final Performance Summary]
+Total messages processed: 657251
+Total elapsed time: 301.08s
+Average messages per second: 2182.95
+Average CPU Usage: 45.86%
+Average Memory Usage: 12.75 MB
+Average Bytes Sent per Interval: 284.67 MB
+Average Bytes Received per Interval: 11.36 MB
+Average Packets Sent per Interval: 561460.33
+Average Packets Received per Interval: 157936.80
+Average CPU Frequency: 1395.73 MHz
+[nawaza1@kingfisher StressTesting]>
+
+
+150 Clients :
+[Final Performance Summary]
+Total messages processed: 520540
+Total elapsed time: 301.26s
+Average messages per second: 1727.90
+Average CPU Usage: 30.66%
+Average Memory Usage: 12.87 MB
+Average Bytes Sent per Interval: 187.61 MB
+Average Bytes Received per Interval: 8.94 MB
+Average Packets Sent per Interval: 385319.07
+Average Packets Received per Interval: 125192.93
+Average CPU Frequency: 1577.62 MHz
+[nawaza1@kingfisher StressTesting]>
+..
+
+
+125 Clients
+[Final Performance Summary]
+Total messages processed: 502758
+Total elapsed time: 301.06s
+Average messages per second: 1669.95
+Average CPU Usage: 26.07%
+Average Memory Usage: 12.73 MB
+Average Bytes Sent per Interval: 152.83 MB
+Average Bytes Received per Interval: 8.06 MB
+Average Packets Sent per Interval: 325119.07
+Average Packets Received per Interval: 111979.67
+Average CPU Frequency: 1635.37 MHz
+[nawaza1@kingfisher StressTesting]>
+
+
+
+
+100 Clients:
+[Final Performance Summary]
+Total messages processed: 419027
+Total elapsed time: 300.49s
+Average messages per second: 1394.48
+Average CPU Usage: 16.25%
+Average Memory Usage: 12.62 MB
+Average Bytes Sent per Interval: 99.68 MB
+Average Bytes Received per Interval: 6.74 MB
+Average Packets Sent per Interval: 218646.47
+Average Packets Received per Interval: 94029.47
+Average CPU Frequency: 1513.21 MHz
+[nawaza1@kingfisher StressTesting]>
+
+
+[Final Performance Summary]
+Total messages processed: 420005
+Total elapsed time: 301.19s
+Average messages per second: 1394.47
+Average CPU Usage: 17.31%
+Average Memory Usage: 12.88 MB
+Average Bytes Sent per Interval: 91.45 MB
+Average Bytes Received per Interval: 7.46 MB
+Average Packets Sent per Interval: 232976.33
+Average Packets Received per Interval: 104705.67
+Average CPU Frequency: 1606.86 MHz
+[nawaza1@kingfisher StressTesting]>
