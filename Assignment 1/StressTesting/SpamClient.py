@@ -15,7 +15,7 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # Set the buffer size (adjust the size in bytes to what you need)
 send_buffer_size = 16384 # You can adjust this to a higher value
-recv_buffer_size = 32768  # You can adjust this to a higher value
+recv_buffer_size = 34768  # You can adjust this to a higher value
 
 # Set the socket options for the send and receive buffer sizes
 client.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, send_buffer_size)
