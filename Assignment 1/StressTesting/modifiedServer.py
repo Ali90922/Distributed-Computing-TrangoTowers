@@ -35,9 +35,6 @@ server_start_time = time.time()
 # Running flag to control the server loop
 running = True
 
-# Messages sent and received per client
-client_stats = {}  # Key: client_socket, Value: {'sent': int, 'received': int}
-
 # Initialize psutil process and network counters
 process = psutil.Process()
 net_counters = psutil.net_io_counters()
@@ -50,9 +47,6 @@ total_bytes_recv = 0
 interval_count = 0
 
 # Broadcast message to all connected clients
-import socket
-import errno
-
 def broadcast(message, sender_socket=None):
     global message_count, total_message_count
     sender_nickname = nicknames.get(sender_socket, "Unknown")  # Get the nickname associated with the socket
@@ -69,10 +63,6 @@ def broadcast(message, sender_socket=None):
         try:
             # Attempt to send the message
             client_socket.send((message + "\n").encode('ascii'))
-            
-            # Update the stats for received messages
-            if client_socket in client_stats:
-                client_stats[client_socket]['received'] += 1
         
         except socket.error as e:
             # If the socket buffer is full, skip and try later
@@ -94,8 +84,6 @@ def remove_client(client_socket):
         print(f"Client {nickname} has been removed.")
     if client_socket in nicknames:
         nicknames.pop(client_socket)
-    if client_socket in client_stats:
-        client_stats.pop(client_socket)
     client_socket.close()
 
     # Optionally, notify other clients of the disconnection
@@ -131,7 +119,6 @@ def run_server():
                     client_socket.setblocking(False)
                     sockets_list.append(client_socket)
                     clients[client_socket] = None  # Placeholder for the nickname
-                    client_stats[client_socket] = {'sent': 0, 'received': 0}
                     client_socket.send("NICK\n".encode('ascii'))  # Ask for nickname
                 except Exception as e:
                     print(f"Error accepting new connection: {e}")
@@ -156,20 +143,7 @@ def run_server():
                 except Exception as e:
                     nickname = clients.get(notified_socket, "Unknown")
                     print(f"Error with client {nickname}: {e}")
-                    # Remove the client on failure
-                    if notified_socket in sockets_list:
-                        sockets_list.remove(notified_socket)
-                    if notified_socket in clients:
-                        clients.pop(notified_socket)
-                    if notified_socket in nicknames:
-                        nicknames.pop(notified_socket)
-                    if notified_socket in client_stats:
-                        client_stats.pop(notified_socket)
-                    notified_socket.close()
-                    # Optionally, notify remaining clients
-                    leave_message = f'{nickname} has left the chat.'
-                    print(leave_message)
-                    # You can choose to queue leave messages to be sent later to avoid recursion
+                    remove_client(notified_socket)
 
         if time.time() - last_log_time >= interval:
             elapsed_time = time.time() - start_time
@@ -203,12 +177,6 @@ def run_server():
                 print(f"Memory Usage: {memory_usage:.2f} MB")
                 print(f"Bytes sent in interval: {bytes_sent_mb:.2f} MB")
                 print(f"Bytes received in interval: {bytes_recv_mb:.2f} MB")
-                print(f"Clients Stats:")
-                for client_socket, stats in client_stats.items():
-                    nickname = clients.get(client_socket, "Unknown")
-                    sent = stats['sent']
-                    received = stats['received']
-                    print(f" - {nickname}: Sent: {sent}, Received: {received}")
                 print("-" * 50)
                 message_count = 0
                 start_time = time.time()
