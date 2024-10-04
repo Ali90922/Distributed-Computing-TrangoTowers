@@ -44,6 +44,8 @@ total_cpu_usage = 0.0
 total_memory_usage = 0.0
 total_bytes_sent = 0
 total_bytes_recv = 0
+total_disk_read = 0.0
+total_disk_write = 0.0
 interval_count = 0
 
 # Broadcast message to all connected clients
@@ -94,7 +96,7 @@ def remove_client(client_socket):
 # Main server loop to handle connections, data, and performance logging
 def run_server():
     global running, message_count, start_time, total_cpu_usage, total_memory_usage
-    global total_bytes_sent, total_bytes_recv, interval_count, total_message_count, net_counters
+    global total_bytes_sent, total_bytes_recv, interval_count, total_message_count, net_counters, total_disk_read, total_disk_write
 
     print(f"Server is listening on {host}:{port}")
 
@@ -162,10 +164,17 @@ def run_server():
                 bytes_sent_mb = bytes_sent / (1024 * 1024)
                 bytes_recv_mb = bytes_recv / (1024 * 1024)
 
+                # Disk I/O stats
+                io_counters = process.io_counters()
+                read_bytes = io_counters.read_bytes / (1024 * 1024)  # Convert to MB
+                write_bytes = io_counters.write_bytes / (1024 * 1024)  # Convert to MB
+
                 total_cpu_usage += cpu_usage
                 total_memory_usage += memory_usage
                 total_bytes_sent += bytes_sent
                 total_bytes_recv += bytes_recv
+                total_disk_read += read_bytes
+                total_disk_write += write_bytes
                 interval_count += 1
 
                 print(f"\n[Performance Log]")
@@ -177,6 +186,8 @@ def run_server():
                 print(f"Memory Usage: {memory_usage:.2f} MB")
                 print(f"Bytes sent in interval: {bytes_sent_mb:.2f} MB")
                 print(f"Bytes received in interval: {bytes_recv_mb:.2f} MB")
+                print(f"Disk read: {read_bytes:.2f} MB")
+                print(f"Disk write: {write_bytes:.2f} MB")
                 print("-" * 50)
                 message_count = 0
                 start_time = time.time()
@@ -190,12 +201,16 @@ def run_server():
         avg_memory_usage = total_memory_usage / interval_count
         avg_bytes_sent_mb = (total_bytes_sent / interval_count) / (1024 * 1024)
         avg_bytes_recv_mb = (total_bytes_recv / interval_count) / (1024 * 1024)
+        avg_disk_read_mb = total_disk_read / interval_count
+        avg_disk_write_mb = total_disk_write / interval_count
     else:
         avg_mps = 0
         avg_cpu_usage = 0
         avg_memory_usage = 0
         avg_bytes_sent_mb = 0
         avg_bytes_recv_mb = 0
+        avg_disk_read_mb = 0
+        avg_disk_write_mb = 0
 
     print(f"\n[Final Performance Summary]")
     print(f"Total messages processed: {total_message_count}")
@@ -205,6 +220,8 @@ def run_server():
     print(f"Average Memory Usage: {avg_memory_usage:.2f} MB")
     print(f"Average Bytes Sent per Interval: {avg_bytes_sent_mb:.2f} MB")
     print(f"Average Bytes Received per Interval: {avg_bytes_recv_mb:.2f} MB")
+    print(f"Average Disk Read per Interval: {avg_disk_read_mb:.2f} MB")
+    print(f"Average Disk Write per Interval: {avg_disk_write_mb:.2f} MB")
 
     for client_socket in clients.keys():
         client_socket.close()
