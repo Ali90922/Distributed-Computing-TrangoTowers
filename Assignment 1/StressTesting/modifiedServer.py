@@ -44,7 +44,11 @@ total_cpu_usage = 0.0
 total_memory_usage = 0.0
 total_bytes_sent = 0
 total_bytes_recv = 0
+total_packets_sent = 0
+total_packets_recv = 0
 interval_count = 0
+total_load_avg = [0.0, 0.0, 0.0]
+total_cpu_freq = 0.0
 
 # Broadcast message to all connected clients
 def broadcast(message, sender_socket=None):
@@ -95,6 +99,7 @@ def remove_client(client_socket):
 def run_server():
     global running, message_count, start_time, total_cpu_usage, total_memory_usage
     global total_bytes_sent, total_bytes_recv, interval_count, total_message_count, net_counters
+    global total_packets_sent, total_packets_recv, total_load_avg, total_cpu_freq
 
     print(f"Server is listening on {host}:{port}")
 
@@ -158,14 +163,26 @@ def run_server():
                 new_net_counters = psutil.net_io_counters()
                 bytes_sent = new_net_counters.bytes_sent - net_counters.bytes_sent
                 bytes_recv = new_net_counters.bytes_recv - net_counters.bytes_recv
+                packets_sent = new_net_counters.packets_sent - net_counters.packets_sent
+                packets_recv = new_net_counters.packets_recv - net_counters.packets_recv
                 net_counters = new_net_counters
                 bytes_sent_mb = bytes_sent / (1024 * 1024)
                 bytes_recv_mb = bytes_recv / (1024 * 1024)
+
+                # System Load Average
+                load_avg = psutil.getloadavg()  # Get system load (1m, 5m, 15m)
+                total_load_avg = [x + y for x, y in zip(total_load_avg, load_avg)]  # Accumulate load averages
+
+                # CPU Frequency
+                cpu_freq = psutil.cpu_freq().current
+                total_cpu_freq += cpu_freq
 
                 total_cpu_usage += cpu_usage
                 total_memory_usage += memory_usage
                 total_bytes_sent += bytes_sent
                 total_bytes_recv += bytes_recv
+                total_packets_sent += packets_sent
+                total_packets_recv += packets_recv
                 interval_count += 1
 
                 print(f"\n[Performance Log]")
@@ -177,6 +194,10 @@ def run_server():
                 print(f"Memory Usage: {memory_usage:.2f} MB")
                 print(f"Bytes sent in interval: {bytes_sent_mb:.2f} MB")
                 print(f"Bytes received in interval: {bytes_recv_mb:.2f} MB")
+                print(f"Packets sent in interval: {packets_sent}")
+                print(f"Packets received in interval: {packets_recv}")
+                print(f"System Load (1m, 5m, 15m): {load_avg}")
+                print(f"CPU Frequency: {cpu_freq:.2f} MHz")
                 print("-" * 50)
                 message_count = 0
                 start_time = time.time()
@@ -190,12 +211,20 @@ def run_server():
         avg_memory_usage = total_memory_usage / interval_count
         avg_bytes_sent_mb = (total_bytes_sent / interval_count) / (1024 * 1024)
         avg_bytes_recv_mb = (total_bytes_recv / interval_count) / (1024 * 1024)
+        avg_packets_sent = total_packets_sent / interval_count
+        avg_packets_recv = total_packets_recv / interval_count
+        avg_cpu_freq = total_cpu_freq / interval_count
+        avg_load_avg = [x / interval_count for x in total_load_avg]
     else:
         avg_mps = 0
         avg_cpu_usage = 0
         avg_memory_usage = 0
         avg_bytes_sent_mb = 0
         avg_bytes_recv_mb = 0
+        avg_packets_sent = 0
+        avg_packets_recv = 0
+        avg_cpu_freq = 0
+        avg_load_avg = [0, 0, 0]
 
     print(f"\n[Final Performance Summary]")
     print(f"Total messages processed: {total_message_count}")
@@ -205,7 +234,11 @@ def run_server():
     print(f"Average Memory Usage: {avg_memory_usage:.2f} MB")
     print(f"Average Bytes Sent per Interval: {avg_bytes_sent_mb:.2f} MB")
     print(f"Average Bytes Received per Interval: {avg_bytes_recv_mb:.2f} MB")
-
+    print(f"Average Packets Sent per Interval: {avg_packets_sent:.2f}")
+    print(f"Average Packets Received per Interval: {avg_packets_recv:.2f}")
+    print(f"Average CPU Frequency: {avg_cpu_freq:.2f} MHz")
+    print(f"Average System Load (1m, 5m, 15m): {avg_load_avg}")
+    
     for client_socket in clients.keys():
         client_socket.close()
 
