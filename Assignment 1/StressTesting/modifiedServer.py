@@ -4,81 +4,74 @@ import time
 import sys
 import psutil
 import errno
+import sqlite3  # Import SQLite module
 
-host = '0.0.0.0'  # Update to the public IP of the server if needed
+host = '0.0.0.0'
 port = 55456
 
 # Create a server socket (IPv4 + TCP)
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1048576)  # 1MB
-
 server.bind((host, port))
-server.listen(500)  # Set the backlog to 500 to allow more pending connections
-
-# Set server socket to non-blocking
+server.listen(500)
 server.setblocking(False)
 
-# List of sockets to monitor for incoming data
 sockets_list = [server]
 clients = {}
 nicknames = {}
 
-# Performance tracking variables
-message_count = 0
-start_time = time.time()
+# SQLite setup: Create or connect to an SQLite database
+conn = sqlite3.connect('chat_logs.db')
+cursor = conn.cursor()
 
-# Total performance tracking variables
-total_message_count = 0
-server_start_time = time.time()
+# Create a table to store chat messages (if it doesn't already exist)
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS chat_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT,
+    nickname TEXT,
+    message TEXT
+)
+''')
+conn.commit()
 
-# Running flag to control the server loop
-running = True
+def log_message(nickname, message):
+    """Log a message to the database."""
+    timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+    cursor.execute('''
+    INSERT INTO chat_logs (timestamp, nickname, message)
+    VALUES (?, ?, ?)
+    ''', (timestamp, nickname, message))
+    conn.commit()
 
-# Initialize psutil process and network counters
-process = psutil.Process()
-net_counters = psutil.net_io_counters()
+def get_last_100_messages():
+    """Retrieve the last 100 messages from the database."""
+    cursor.execute('''
+    SELECT timestamp, nickname, message
+    FROM chat_logs
+    ORDER BY id DESC
+    LIMIT 100
+    ''')
+    return cursor.fetchall()[::-1]  # Reverse order to show from oldest to newest
 
-# Initialize cumulative stats for averages
-total_cpu_usage = 0.0
-total_memory_usage = 0.0
-total_bytes_sent = 0
-total_bytes_recv = 0
-total_disk_read = 0.0
-total_disk_write = 0.0
-interval_count = 0
-
-# Broadcast message to all connected clients
 def broadcast(message, sender_socket=None):
-    global message_count, total_message_count
-    sender_nickname = nicknames.get(sender_socket, "Unknown")  # Get the nickname associated with the socket
-
-    # Increment message counts
-    message_count += 1
-    total_message_count += 1
-
+    """Broadcast a message to all clients except the sender."""
     for client_socket in list(clients.keys()):
-        # Don't send the message back to the sender
         if client_socket == sender_socket:
             continue
-
         try:
-            # Attempt to send the message
             client_socket.send((message + "\n").encode('ascii'))
-        
         except socket.error as e:
-            # If the socket buffer is full, skip and try later
             if e.errno == errno.EAGAIN or e.errno == errno.EWOULDBLOCK:
                 print(f"Socket buffer full for {clients.get(client_socket, 'Unknown')}. Will retry later.")
-                continue  # Skip sending to this client now and try again later
-            
-            # For other errors, handle disconnection
+                continue
             else:
                 print(f"Error sending message to {clients.get(client_socket, 'Unknown')}: {e}")
-                remove_client(client_socket)  # Remove and clean up disconnected client
+                remove_client(client_socket)
 
 def remove_client(client_socket):
-    """Function to remove a client and clean up its resources."""
+    """Remove a client from the server and close their connection."""
     if client_socket in sockets_list:
         sockets_list.remove(client_socket)
     if client_socket in clients:
@@ -87,24 +80,14 @@ def remove_client(client_socket):
     if client_socket in nicknames:
         nicknames.pop(client_socket)
     client_socket.close()
-
-    # Optionally, notify other clients of the disconnection
     leave_message = f'{nickname} has left the chat.'
     broadcast(leave_message)
 
-
-# Main server loop to handle connections, data, and performance logging
 def run_server():
-    global running, message_count, start_time, total_cpu_usage, total_memory_usage
-    global total_bytes_sent, total_bytes_recv, interval_count, total_message_count, net_counters, total_disk_read, total_disk_write
-
+    """Main server loop to handle connections and messages."""
     print(f"Server is listening on {host}:{port}")
 
-    interval = 5  # Log every 5 seconds
-    last_log_time = time.time()
-
-    while running:
-        time_until_log = last_log_time + interval - time.time()
+    while True:
         timeout = 0.5
 
         try:
@@ -120,7 +103,7 @@ def run_server():
                     client_socket, client_address = server.accept()
                     client_socket.setblocking(False)
                     sockets_list.append(client_socket)
-                    clients[client_socket] = None  # Placeholder for the nickname
+                    clients[client_socket] = None
                     client_socket.send("NICK\n".encode('ascii'))  # Ask for nickname
                 except Exception as e:
                     print(f"Error accepting new connection: {e}")
@@ -128,102 +111,34 @@ def run_server():
                 command = sys.stdin.readline().strip().lower()
                 if command == 'quit':
                     print("Shutdown command received. Shutting down the server.")
-                    running = False
-                    server.close()
-                    break
+                    for sock in sockets_list:
+                        sock.close()
+                    conn.close()  # Close the database connection
+                    return
             else:
                 try:
                     message = notified_socket.recv(8192).decode('ascii').strip()
                     if not message:
                         raise Exception("Empty message")
+
                     if clients[notified_socket] is None:
+                        # First message is the nickname
                         nicknames[notified_socket] = message
                         clients[notified_socket] = message  # Set nickname
                         broadcast(f'{message} joined the chat!', notified_socket)
+
+                        # Send last 100 messages to the new client
+                        last_messages = get_last_100_messages()
+                        for timestamp, nickname, msg in last_messages:
+                            client_socket.send(f"[{timestamp}] {nickname}: {msg}\n".encode('ascii'))
                     else:
-                        broadcast(f"{clients[notified_socket]}: {message}", notified_socket)
+                        nickname = clients[notified_socket]
+                        broadcast(f"{nickname}: {message}", notified_socket)
+                        log_message(nickname, message)  # Log message to database
+
                 except Exception as e:
                     nickname = clients.get(notified_socket, "Unknown")
                     print(f"Error with client {nickname}: {e}")
                     remove_client(notified_socket)
-
-        if time.time() - last_log_time >= interval:
-            elapsed_time = time.time() - start_time
-            if elapsed_time > 0:
-                mps = message_count / elapsed_time
-                client_count = len(clients)
-
-                cpu_usage = process.cpu_percent(interval=None)
-                memory_info = process.memory_info()
-                memory_usage = memory_info.rss / (1024 * 1024)
-
-                new_net_counters = psutil.net_io_counters()
-                bytes_sent = new_net_counters.bytes_sent - net_counters.bytes_sent
-                bytes_recv = new_net_counters.bytes_recv - net_counters.bytes_recv
-                net_counters = new_net_counters
-                bytes_sent_mb = bytes_sent / (1024 * 1024)
-                bytes_recv_mb = bytes_recv / (1024 * 1024)
-
-                # Disk I/O stats
-                io_counters = process.io_counters()
-                read_bytes = io_counters.read_bytes / (1024 * 1024)  # Convert to MB
-                write_bytes = io_counters.write_bytes / (1024 * 1024)  # Convert to MB
-
-                total_cpu_usage += cpu_usage
-                total_memory_usage += memory_usage
-                total_bytes_sent += bytes_sent
-                total_bytes_recv += bytes_recv
-                total_disk_read += read_bytes
-                total_disk_write += write_bytes
-                interval_count += 1
-
-                print(f"\n[Performance Log]")
-                print(f"Time Interval: {elapsed_time:.2f}s")
-                print(f"Messages processed in interval: {message_count}")
-                print(f"Messages per second: {mps:.2f}")
-                print(f"Total clients connected: {client_count}")
-                print(f"CPU Usage: {cpu_usage:.2f}%")
-                print(f"Memory Usage: {memory_usage:.2f} MB")
-                print(f"Bytes sent in interval: {bytes_sent_mb:.2f} MB")
-                print(f"Bytes received in interval: {bytes_recv_mb:.2f} MB")
-                print(f"Disk read: {read_bytes:.2f} MB")
-                print(f"Disk write: {write_bytes:.2f} MB")
-                print("-" * 50)
-                message_count = 0
-                start_time = time.time()
-                last_log_time = time.time()
-
-    # Final performance log at shutdown
-    total_elapsed_time = time.time() - server_start_time
-    if total_elapsed_time > 0 and interval_count > 0:
-        avg_mps = total_message_count / total_elapsed_time
-        avg_cpu_usage = total_cpu_usage / interval_count
-        avg_memory_usage = total_memory_usage / interval_count
-        avg_bytes_sent_mb = (total_bytes_sent / interval_count) / (1024 * 1024)
-        avg_bytes_recv_mb = (total_bytes_recv / interval_count) / (1024 * 1024)
-        avg_disk_read_mb = total_disk_read / interval_count
-        avg_disk_write_mb = total_disk_write / interval_count
-    else:
-        avg_mps = 0
-        avg_cpu_usage = 0
-        avg_memory_usage = 0
-        avg_bytes_sent_mb = 0
-        avg_bytes_recv_mb = 0
-        avg_disk_read_mb = 0
-        avg_disk_write_mb = 0
-
-    print(f"\n[Final Performance Summary]")
-    print(f"Total messages processed: {total_message_count}")
-    print(f"Total elapsed time: {total_elapsed_time:.2f}s")
-    print(f"Average messages per second: {avg_mps:.2f}")
-    print(f"Average CPU Usage: {avg_cpu_usage:.2f}%")
-    print(f"Average Memory Usage: {avg_memory_usage:.2f} MB")
-    print(f"Average Bytes Sent per Interval: {avg_bytes_sent_mb:.2f} MB")
-    print(f"Average Bytes Received per Interval: {avg_bytes_recv_mb:.2f} MB")
-    print(f"Average Disk Read per Interval: {avg_disk_read_mb:.2f} MB")
-    print(f"Average Disk Write per Interval: {avg_disk_write_mb:.2f} MB")
-
-    for client_socket in clients.keys():
-        client_socket.close()
 
 run_server()
