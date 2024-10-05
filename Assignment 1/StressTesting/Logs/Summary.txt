@@ -32,10 +32,10 @@ Average CPU Frequency: 1486.96 MHz
 
 150 Clients :
 [Final Performance Summary]
-Total messages processed: 520540
+Total messages processed: 570540
 Total elapsed time: 301.26s
-Average messages per second: 1727.90
-Average CPU Usage: 30.66%
+Average messages per second: 1895.90
+Average CPU Usage: 34.66%
 Average Memory Usage: 12.87 MB
 Average Bytes Sent per Interval: 187.61 MB
 Average Bytes Received per Interval: 8.94 MB
