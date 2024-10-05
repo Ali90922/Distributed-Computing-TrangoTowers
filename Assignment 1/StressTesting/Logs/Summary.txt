@@ -5,7 +5,7 @@
 Total messages processed: 771403
 Total elapsed time: 301.79s
 Average messages per second: 2556.11
-Average CPU Usage: 60.97%
+Average CPU Usage: 67.97%
 Average Memory Usage: 12.62 MB
 Average Bytes Sent per Interval: 393.30 MB
 Average Bytes Received per Interval: 13.08 MB
