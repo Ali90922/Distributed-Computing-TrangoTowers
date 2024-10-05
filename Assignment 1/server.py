@@ -1,6 +1,7 @@
 import socket
 import sqlite3
 import select
+import sys
 
 host = '0.0.0.0'
 port = 55456
@@ -34,7 +35,6 @@ clients = {}
 nicknames = {}
 
 # Broadcast message to all connected clients and save to the database
-# Broadcast message to all connected clients and save to the database
 def broadcast(message, sender_socket=None):
     sender_nickname = nicknames.get(sender_socket, "Unknown")  # Get the nickname associated with the socket
     for client_socket in clients.keys():
@@ -50,8 +50,6 @@ def broadcast(message, sender_socket=None):
     cursor.execute('INSERT INTO messages (nickname, message) VALUES (?, ?)', (sender_nickname, message))
     conn.commit()
 
-
-
 # Load the last few messages from the database
 def load_messages(client_socket):
     cursor.execute('SELECT nickname, message FROM messages ORDER BY id DESC LIMIT 20')
@@ -59,12 +57,27 @@ def load_messages(client_socket):
     for nickname, message in reversed(messages):
         client_socket.send(f"{nickname}: {message}\n".encode('ascii'))  # Ensure each message ends with a newline
 
+# Gracefully close all connections
+def close_all_connections():
+    print("Shutting down the server...")
+    for client_socket in clients.keys():
+        try:
+            client_socket.send("Server is shutting down.\n".encode('ascii'))
+            client_socket.close()
+        except:
+            pass
+    server.close()
+    conn.close()  # Close the database connection
+    print("Server shut down.")
+    sys.exit()
+
 # Main server loop to handle connections and data
 def run_server():
     print(f"Server is listening on {host}:{port}")
+    
     while True:
-        # Use select to wait for readable sockets
-        readable, _, _ = select.select(sockets_list, [], [])
+        # Use select to wait for readable sockets and also check stdin for user input
+        readable, _, _ = select.select(sockets_list + [sys.stdin], [], [])
 
         for notified_socket in readable:
             if notified_socket == server:
@@ -75,6 +88,12 @@ def run_server():
                 clients[client_socket] = None  # Placeholder for the nickname
 
                 client_socket.send("NICK\n".encode('ascii'))  # Ask for nickname
+
+            elif notified_socket == sys.stdin:
+                # Handle command line input (e.g., to shut down the server)
+                command = sys.stdin.readline().strip()
+                if command.lower() == 'quit':
+                    close_all_connections()
 
             else:
                 # Handle data from existing clients
