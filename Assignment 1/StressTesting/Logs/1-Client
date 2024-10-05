@@ -1,2 +1,215 @@
+[nawaza1@kingfisher StressTesting]> python modifiedServer.py
+Server is listening on 0.0.0.0:55456
+
+[Performance Log]
+Time Interval: 20.05s
+Messages processed in interval: 238
+Messages per second: 11.87
+Total clients connected: 1
+CPU Usage: 0.00%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.02 MB
+Bytes received in interval: 0.07 MB
+Packets sent in interval: 250
+Packets received in interval: 990
+CPU Frequency: 1318.75 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.06s
+Messages processed in interval: 249
+Messages per second: 12.42
+Total clients connected: 1
+CPU Usage: 0.10%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.02 MB
+Bytes received in interval: 0.09 MB
+Packets sent in interval: 252
+Packets received in interval: 1152
+CPU Frequency: 1054.40 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.06s
+Messages processed in interval: 249
+Messages per second: 12.41
+Total clients connected: 1
+CPU Usage: 0.10%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.02 MB
+Bytes received in interval: 0.09 MB
+Packets sent in interval: 254
+Packets received in interval: 1127
+CPU Frequency: 800.00 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.06s
+Messages processed in interval: 249
+Messages per second: 12.41
+Total clients connected: 1
+CPU Usage: 0.10%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.02 MB
+Bytes received in interval: 0.09 MB
+Packets sent in interval: 256
+Packets received in interval: 1050
+CPU Frequency: 1255.15 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.06s
+Messages processed in interval: 249
+Messages per second: 12.41
+Total clients connected: 1
+CPU Usage: 0.00%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.02 MB
+Bytes received in interval: 0.08 MB
+Packets sent in interval: 251
+Packets received in interval: 1011
+CPU Frequency: 1318.92 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.06s
+Messages processed in interval: 249
+Messages per second: 12.41
+Total clients connected: 1
+CPU Usage: 0.10%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.02 MB
+Bytes received in interval: 0.07 MB
+Packets sent in interval: 257
+Packets received in interval: 992
+CPU Frequency: 1062.50 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.06s
+Messages processed in interval: 249
+Messages per second: 12.41
+Total clients connected: 1
+CPU Usage: 0.10%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.02 MB
+Bytes received in interval: 0.10 MB
+Packets sent in interval: 256
+Packets received in interval: 1293
+CPU Frequency: 800.00 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.06s
+Messages processed in interval: 249
+Messages per second: 12.41
+Total clients connected: 1
+CPU Usage: 0.10%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.02 MB
+Bytes received in interval: 0.09 MB
+Packets sent in interval: 251
+Packets received in interval: 1168
+CPU Frequency: 854.20 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.06s
+Messages processed in interval: 249
+Messages per second: 12.41
+Total clients connected: 1
+CPU Usage: 0.10%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.02 MB
+Bytes received in interval: 0.08 MB
+Packets sent in interval: 254
+Packets received in interval: 1132
+CPU Frequency: 1514.08 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.06s
+Messages processed in interval: 249
+Messages per second: 12.42
+Total clients connected: 1
+CPU Usage: 0.00%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.05 MB
+Bytes received in interval: 0.11 MB
+Packets sent in interval: 402
+Packets received in interval: 1441
+CPU Frequency: 1318.76 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.06s
+Messages processed in interval: 249
+Messages per second: 12.42
+Total clients connected: 1
+CPU Usage: 0.10%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.02 MB
+Bytes received in interval: 0.14 MB
+Packets sent in interval: 258
+Packets received in interval: 1879
+CPU Frequency: 1570.42 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.06s
+Messages processed in interval: 249
+Messages per second: 12.41
+Total clients connected: 1
+CPU Usage: 0.10%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.02 MB
+Bytes received in interval: 0.10 MB
+Packets sent in interval: 251
+Packets received in interval: 1403
+CPU Frequency: 1603.56 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.05s
+Messages processed in interval: 249
+Messages per second: 12.42
+Total clients connected: 1
+CPU Usage: 0.10%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.02 MB
+Bytes received in interval: 0.10 MB
+Packets sent in interval: 258
+Packets received in interval: 1413
+CPU Frequency: 1926.68 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.06s
+Messages processed in interval: 249
+Messages per second: 12.41
+Total clients connected: 1
+CPU Usage: 0.10%
+Memory Usage: 12.75 MB
+Bytes sent in interval: 0.02 MB
+Bytes received in interval: 0.09 MB
+Packets sent in interval: 254
+Packets received in interval: 1203
+CPU Frequency: 1240.51 MHz
+--------------------------------------------------
+quit
+Shutdown command received. Shutting down the server.
+
+[Final Performance Summary]
+Total messages processed: 3721
+Total elapsed time: 300.65s
+Average messages per second: 12.38
+Average CPU Usage: 0.08%
+Average Memory Usage: 12.75 MB
+Average Bytes Sent per Interval: 0.02 MB
+Average Bytes Received per Interval: 0.09 MB
+Average Packets Sent per Interval: 264.57
+Average Packets Received per Interval: 1232.43
+Average CPU Frequency: 1259.85 MHz
+[nawaza1@kingfisher StressTesting]> 
 ..
 

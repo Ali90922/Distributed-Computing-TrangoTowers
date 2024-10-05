@@ -2,227 +2,226 @@
 Server is listening on 0.0.0.0:55456
 
 [Performance Log]
-Time Interval: 20.01s
-Messages processed in interval: 46359
-Messages per second: 2317.32
+Time Interval: 20.00s
+Messages processed in interval: 52462
+Messages per second: 2623.05
 Total clients connected: 200
 CPU Usage: 0.00%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 331.56 MB
-Bytes received in interval: 12.11 MB
-Packets sent in interval: 662463
-Packets received in interval: 170972
-CPU Frequency: 1575.33 MHz
+Memory Usage: 12.62 MB
+Bytes sent in interval: 391.23 MB
+Bytes received in interval: 13.30 MB
+Packets sent in interval: 758744
+Packets received in interval: 187150
+CPU Frequency: 1477.58 MHz
 --------------------------------------------------
 
 [Performance Log]
 Time Interval: 20.00s
-Messages processed in interval: 44514
-Messages per second: 2225.67
+Messages processed in interval: 56104
+Messages per second: 2805.18
 Total clients connected: 200
-CPU Usage: 56.40%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 323.33 MB
-Bytes received in interval: 11.75 MB
-Packets sent in interval: 631394
-Packets received in interval: 165326
-CPU Frequency: 1777.91 MHz
+CPU Usage: 63.90%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 423.98 MB
+Bytes received in interval: 13.74 MB
+Packets sent in interval: 806497
+Packets received in interval: 192930
+CPU Frequency: 1826.40 MHz
 --------------------------------------------------
 
 [Performance Log]
 Time Interval: 20.00s
-Messages processed in interval: 45523
-Messages per second: 2275.79
+Messages processed in interval: 55258
+Messages per second: 2762.90
 Total clients connected: 200
-CPU Usage: 60.40%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 330.88 MB
-Bytes received in interval: 11.96 MB
-Packets sent in interval: 648644
-Packets received in interval: 168455
-CPU Frequency: 1575.00 MHz
+CPU Usage: 65.20%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 417.63 MB
+Bytes received in interval: 13.67 MB
+Packets sent in interval: 795496
+Packets received in interval: 192005
+CPU Frequency: 2042.69 MHz
 --------------------------------------------------
 
 [Performance Log]
 Time Interval: 20.00s
-Messages processed in interval: 50184
-Messages per second: 2509.14
+Messages processed in interval: 54390
+Messages per second: 2719.41
 Total clients connected: 200
-CPU Usage: 69.90%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 365.25 MB
-Bytes received in interval: 12.94 MB
-Packets sent in interval: 722193
-Packets received in interval: 182211
-CPU Frequency: 1062.50 MHz
+CPU Usage: 74.10%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 414.49 MB
+Bytes received in interval: 13.54 MB
+Packets sent in interval: 782721
+Packets received in interval: 189994
+CPU Frequency: 1318.75 MHz
 --------------------------------------------------
 
 [Performance Log]
 Time Interval: 20.00s
-Messages processed in interval: 46238
-Messages per second: 2311.87
+Messages processed in interval: 55964
+Messages per second: 2798.06
 Total clients connected: 200
-CPU Usage: 63.60%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 342.76 MB
-Bytes received in interval: 12.23 MB
-Packets sent in interval: 664926
-Packets received in interval: 172034
-CPU Frequency: 2051.54 MHz
+CPU Usage: 80.20%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 433.75 MB
+Bytes received in interval: 13.90 MB
+Packets sent in interval: 808313
+Packets received in interval: 194380
+CPU Frequency: 1460.43 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.08s
+Messages processed in interval: 51418
+Messages per second: 2560.93
+Total clients connected: 200
+CPU Usage: 71.70%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 398.87 MB
+Bytes received in interval: 13.27 MB
+Packets sent in interval: 745935
+Packets received in interval: 186201
+CPU Frequency: 1837.50 MHz
 --------------------------------------------------
 
 [Performance Log]
 Time Interval: 20.00s
-Messages processed in interval: 48195
-Messages per second: 2409.61
+Messages processed in interval: 38844
+Messages per second: 1942.17
 Total clients connected: 200
-CPU Usage: 61.00%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 359.64 MB
-Bytes received in interval: 12.60 MB
-Packets sent in interval: 688164
-Packets received in interval: 176843
-CPU Frequency: 1575.32 MHz
+CPU Usage: 43.80%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 301.34 MB
+Bytes received in interval: 11.26 MB
+Packets sent in interval: 566198
+Packets received in interval: 159196
+CPU Frequency: 1323.22 MHz
 --------------------------------------------------
 
 [Performance Log]
 Time Interval: 20.00s
-Messages processed in interval: 45710
-Messages per second: 2285.40
+Messages processed in interval: 45715
+Messages per second: 2285.70
 Total clients connected: 200
-CPU Usage: 53.40%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 341.06 MB
-Bytes received in interval: 13.51 MB
-Packets sent in interval: 650942
-Packets received in interval: 171030
-CPU Frequency: 1973.63 MHz
---------------------------------------------------
-
-[Performance Log]
-Time Interval: 20.01s
-Messages processed in interval: 19861
-Messages per second: 992.80
-Total clients connected: 200
-CPU Usage: 20.40%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 148.43 MB
-Bytes received in interval: 6.40 MB
-Packets sent in interval: 288759
-Packets received in interval: 90451
-CPU Frequency: 1062.50 MHz
---------------------------------------------------
-
-[Performance Log]
-Time Interval: 20.00s
-Messages processed in interval: 44846
-Messages per second: 2242.19
-Total clients connected: 200
-CPU Usage: 56.50%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 334.62 MB
-Bytes received in interval: 11.90 MB
-Packets sent in interval: 639475
-Packets received in interval: 167188
-CPU Frequency: 1374.27 MHz
---------------------------------------------------
-
-[Performance Log]
-Time Interval: 20.02s
-Messages processed in interval: 29532
-Messages per second: 1474.94
-Total clients connected: 200
-CPU Usage: 29.70%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 221.14 MB
-Bytes received in interval: 9.51 MB
-Packets sent in interval: 431335
-Packets received in interval: 133941
-CPU Frequency: 1836.30 MHz
---------------------------------------------------
-
-[Performance Log]
-Time Interval: 20.00s
-Messages processed in interval: 33976
-Messages per second: 1698.62
-Total clients connected: 200
-CPU Usage: 39.80%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 253.78 MB
-Bytes received in interval: 10.04 MB
-Packets sent in interval: 490574
-Packets received in interval: 141304
-CPU Frequency: 2358.35 MHz
---------------------------------------------------
-
-[Performance Log]
-Time Interval: 20.02s
-Messages processed in interval: 43124
-Messages per second: 2154.27
-Total clients connected: 200
-CPU Usage: 52.40%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 321.52 MB
-Bytes received in interval: 11.47 MB
-Packets sent in interval: 611859
-Packets received in interval: 161044
-CPU Frequency: 1576.36 MHz
---------------------------------------------------
-
-[Performance Log]
-Time Interval: 20.00s
-Messages processed in interval: 46039
-Messages per second: 2301.94
-Total clients connected: 200
-CPU Usage: 57.40%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 343.25 MB
+CPU Usage: 61.20%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 354.16 MB
 Bytes received in interval: 12.06 MB
-Packets sent in interval: 654127
-Packets received in interval: 169359
-CPU Frequency: 1613.19 MHz
+Packets sent in interval: 659132
+Packets received in interval: 169421
+CPU Frequency: 1575.34 MHz
 --------------------------------------------------
 
 [Performance Log]
 Time Interval: 20.00s
-Messages processed in interval: 46321
-Messages per second: 2316.05
+Messages processed in interval: 55396
+Messages per second: 2769.75
 Total clients connected: 200
-CPU Usage: 54.00%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 345.12 MB
-Bytes received in interval: 12.01 MB
-Packets sent in interval: 653896
-Packets received in interval: 168545
-CPU Frequency: 1318.68 MHz
+CPU Usage: 62.10%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 429.23 MB
+Bytes received in interval: 13.78 MB
+Packets sent in interval: 798217
+Packets received in interval: 192876
+CPU Frequency: 1312.10 MHz
 --------------------------------------------------
 
 [Performance Log]
 Time Interval: 20.01s
-Messages processed in interval: 41661
-Messages per second: 2082.35
+Messages processed in interval: 31977
+Messages per second: 1597.89
 Total clients connected: 200
-CPU Usage: 53.30%
-Memory Usage: 12.75 MB
-Bytes sent in interval: 311.10 MB
-Bytes received in interval: 11.53 MB
-Packets sent in interval: 599329
-Packets received in interval: 162348
-CPU Frequency: 1572.74 MHz
+CPU Usage: 38.50%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 247.93 MB
+Bytes received in interval: 9.99 MB
+Packets sent in interval: 465214
+Packets received in interval: 141757
+CPU Frequency: 1246.22 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.00s
+Messages processed in interval: 48144
+Messages per second: 2407.17
+Total clients connected: 200
+CPU Usage: 66.90%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 373.16 MB
+Bytes received in interval: 12.64 MB
+Packets sent in interval: 696366
+Packets received in interval: 177549
+CPU Frequency: 1550.26 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.00s
+Messages processed in interval: 55275
+Messages per second: 2763.70
+Total clients connected: 200
+CPU Usage: 68.70%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 428.23 MB
+Bytes received in interval: 13.67 MB
+Packets sent in interval: 795784
+Packets received in interval: 191173
+CPU Frequency: 1314.96 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.00s
+Messages processed in interval: 53345
+Messages per second: 2667.23
+Total clients connected: 200
+CPU Usage: 67.90%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 413.43 MB
+Bytes received in interval: 13.54 MB
+Packets sent in interval: 770368
+Packets received in interval: 189750
+CPU Frequency: 1575.28 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.00s
+Messages processed in interval: 56288
+Messages per second: 2814.23
+Total clients connected: 200
+CPU Usage: 80.30%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 436.08 MB
+Bytes received in interval: 13.79 MB
+Packets sent in interval: 810085
+Packets received in interval: 192891
+CPU Frequency: 1502.54 MHz
+--------------------------------------------------
+
+[Performance Log]
+Time Interval: 20.00s
+Messages processed in interval: 56243
+Messages per second: 2812.14
+Total clients connected: 200
+CPU Usage: 70.00%
+Memory Usage: 12.62 MB
+Bytes sent in interval: 435.95 MB
+Bytes received in interval: 14.01 MB
+Packets sent in interval: 812789
+Packets received in interval: 196110
+CPU Frequency: 1834.42 MHz
 --------------------------------------------------
 quit
 Shutdown command received. Shutting down the server.
 
 [Final Performance Summary]
-Total messages processed: 633691
-Total elapsed time: 300.88s
-Average messages per second: 2106.14
-Average CPU Usage: 48.55%
-Average Memory Usage: 12.75 MB
-Average Bytes Sent per Interval: 311.56 MB
-Average Bytes Received per Interval: 11.47 MB
-Average Packets Sent per Interval: 602538.67
-Average Packets Received per Interval: 160070.07
-Average CPU Frequency: 1620.24 MHz
-[nawaza1@kingfisher StressTesting]> 
-..
+Total messages processed: 771403
+Total elapsed time: 301.79s
+Average messages per second: 2556.11
+Average CPU Usage: 60.97%
+Average Memory Usage: 12.62 MB
+Average Bytes Sent per Interval: 393.30 MB
+Average Bytes Received per Interval: 13.08 MB
+Average Packets Sent per Interval: 738123.93
+Average Packets Received per Interval: 183558.87
+Average CPU Frequency: 1546.51 MHz
+[nawaza1@kingfisher StressTesting]>
