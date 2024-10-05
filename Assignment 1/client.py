@@ -5,13 +5,13 @@ import termios
 import tty
 
 # Check if the correct number of command-line arguments were provided
-if len(sys.argv) != 3:
-    print("Usage: python client.py <HOST_IP> <PORT>")
+if len(sys.argv) != 2:
+    print("Usage: python client.py <HOST_IP>")
     sys.exit()
 
-# Extract host and port from command-line arguments
+# Extract host from command-line arguments
 host = sys.argv[1]
-port = int(sys.argv[2])
+port = 55456  # Hardcoded port number
 
 # Choose a nickname for the user
 nickname = input("Choose a Nickname: ")
@@ -84,7 +84,5 @@ run_client()
 
 
 
-# Run the Script with : 
-#   python client.py <HOST_IP> <PORT>
-
-### python client.py 127.0.0.1 55456
+#How to run it : 
+# python client.py <HOST_IP>
