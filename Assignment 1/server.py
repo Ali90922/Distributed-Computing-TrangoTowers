@@ -12,7 +12,7 @@ port = 55456      # Port to listen on
 conn = sqlite3.connect('chat.db', check_same_thread=False)
 cursor = conn.cursor()
 
-# Create a table for storing messages if it doesn't already exist
+# Create a table for storing messages.
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,6 +24,7 @@ conn.commit()
 
 # Create a TCP server socket (IPv4)
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# Following line bypasses the Time Wait state :
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allows re-binding to the same address/port if the server is restarted
 server.bind((host, port))  # Bind the server to the host and port
 server.listen()  # Start listening for incoming connections
