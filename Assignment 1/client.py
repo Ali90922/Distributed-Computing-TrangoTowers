@@ -43,7 +43,12 @@ def run_client():
                 if notified_socket == client:
                     try:
                         message = client.recv(1024).decode('ascii').strip()
-                        if message == 'NICK':
+                        if message == '':
+                            # Empty message means the server has shut down
+                            print("\nServer has shut down. Exiting...")
+                            client.close()
+                            sys.exit()
+                        elif message == 'NICK':
                             client.send(nickname.encode('ascii'))  # Send nickname when asked
                         else:
                             # Move the cursor back to the start of the line, clear the line, and display the message
