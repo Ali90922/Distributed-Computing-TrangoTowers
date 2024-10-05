@@ -4,15 +4,21 @@ import sys
 import termios
 import tty
 
+# Check if the correct number of command-line arguments were provided
+if len(sys.argv) != 3:
+    print("Usage: python client.py <HOST_IP> <PORT>")
+    sys.exit()
+
+# Extract host and port from command-line arguments
+host = sys.argv[1]
+port = int(sys.argv[2])
+
 # Choose a nickname for the user
 nickname = input("Choose a Nickname: ")
 
-
-
-
 # Create a client socket (IPv4 + TCP)
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('127.0.0.1', 55456))
+client.connect((host, port))
 client.setblocking(False)  # Make the socket non-blocking
 
 # Display the prompt with the nickname immediately after the nickname is chosen
@@ -21,11 +27,6 @@ sys.stdout.flush()
 
 # Save the original terminal settings
 orig_settings = termios.tcgetattr(sys.stdin)
-
-
-
-
-
 
 def run_client():
     partial_message = ''  # Store what the user is currently typing
@@ -80,4 +81,10 @@ def run_client():
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, orig_settings)
 
 run_client()
-# study the protocol
+
+
+
+# Run the Script with : 
+#   python client.py <HOST_IP> <PORT>
+
+### python client.py 127.0.0.1 55456
