@@ -61,6 +61,12 @@ def run_client():
             if dr:
                 char = sys.stdin.read(1)
                 if char == '\n':
+                    if partial_message.lower() == "quit":  # Check if the user typed 'quit'
+                        client.send(f'{nickname} has left the chat.\n'.encode('ascii'))  # Inform the server
+                        print("\nExiting the chatroom...")
+                        client.close()
+                        sys.exit()
+
                     # Send the message without including the nickname
                     client.send(partial_message.encode('ascii'))
                     partial_message = ''
@@ -81,8 +87,3 @@ def run_client():
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, orig_settings)
 
 run_client()
-
-
-
-#How to run it : 
-# python client.py <HOST_IP>
