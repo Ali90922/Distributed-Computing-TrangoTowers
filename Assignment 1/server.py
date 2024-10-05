@@ -2,7 +2,7 @@ import socket
 import sqlite3
 import select
 
-host = '127.0.0.1'
+host = '0.0.0.0'
 port = 55456
 
 # Connect to SQLite database
