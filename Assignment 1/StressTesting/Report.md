@@ -79,6 +79,10 @@ In this analysis, we evaluate the performance of our chat server by measuring ho
 ![Boxplot](Graphs/box_plots_packets_bytes.png)
 ![Boxplot](Graphs/box_plots_messages_cpu.png)
 
+The box plots represent data collected at 20-second intervals for four client groups: 75, 125, 175, and 225. The Total Messages Processed and CPU Usage show increasing variation as the client count rises, with higher outliers especially noticeable for larger client groups. This indicates that while the server generally handles more messages and utilizes more CPU with additional clients, the performance becomes less consistent as the load increases. The Packets Received and Bytes Sent also show growing variability, particularly at 225 clients, suggesting that the server struggles to maintain uniform performance under high load
+
+The Raw Data can be accessed in the logs folder which contains the full terminal logs for each test.
+
 ## Analysis
 
 ### Did running more clients affect the performance of your server?
