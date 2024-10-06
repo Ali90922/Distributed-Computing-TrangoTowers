@@ -71,7 +71,7 @@ In this analysis, we evaluate the performance of our chat server by measuring ho
 
 #### Total Messages Processed vs. Number of Clients | with ideal performance
 
-![Total Messages Processed vs Clients](Graphs/Total_Messages_Processed_vs_Clients_with_Ideal_Gradient)
+![Total Messages Processed vs Clients](Graphs/Total_Messages_Processed_vs_Clients_with_Ideal_Gradient.png)
 
 ## Analysis
 
