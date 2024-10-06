@@ -3,25 +3,26 @@ import select
 import sys
 import time
 
-# Check if a nickname is provided via command line arguments
-if len(sys.argv) < 2:
-    print("Usage: python3 SpamClient.py <nickname>")
+# Check if both a nickname and server IP are provided via command line arguments
+if len(sys.argv) < 3:
+    print("Usage: python3 SpamClient.py <nickname> <server_ip>")
     sys.exit()
 
 nickname = sys.argv[1]  # Use the first command-line argument as the nickname
+server_ip = sys.argv[2]  # Use the second command-line argument as the server IP
 
 # Create a client socket (IPv4 + TCP)
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # Set the buffer size (adjust the size in bytes to what you need)
-send_buffer_size = 16384 # You can adjust this to a higher value
+send_buffer_size = 16384  # You can adjust this to a higher value
 recv_buffer_size = 34768  # You can adjust this to a higher value
 
 # Set the socket options for the send and receive buffer sizes
 client.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, send_buffer_size)
 client.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, recv_buffer_size)
 
-client.connect(('130.179.28.122', 55456))
+client.connect((server_ip, 55456))  # Use server_ip from the command-line arguments
 client.setblocking(False)  # Make the socket non-blocking
 
 # Main loop to handle sending and receiving messages
@@ -78,4 +79,3 @@ def run_spam_client():
         time.sleep(0.07)  # Slowing down the spam rate to avoid overwhelming the server
 
 run_spam_client()
-
