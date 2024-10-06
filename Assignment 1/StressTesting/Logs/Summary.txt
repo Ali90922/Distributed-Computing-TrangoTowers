@@ -1,6 +1,5 @@
 
-
-
+225 Client:
 [Final Performance Summary]
 Total messages processed: 730558
 Total elapsed time: 300.58s

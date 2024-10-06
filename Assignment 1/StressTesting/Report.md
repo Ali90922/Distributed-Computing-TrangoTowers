@@ -49,10 +49,6 @@ In this analysis, we evaluate the performance of our chat server by measuring ho
 
 ![Average CPU Usage vs Clients](Graphs/Average_CPU_Usage_vs_Clients.png)
 
-#### Average Memory Usage vs. Number of Clients
-
-![Average Memory Usage vs Clients](Graphs/Average_Memory_Usage_vs_Clients.png)
-
 #### Average CPU Frequency vs. Number of Clients
 
 ![CPU Frequency vs Clients](Graphs/CPU_Frequency_vs_Clients.png)
@@ -71,11 +67,11 @@ In this analysis, we evaluate the performance of our chat server by measuring ho
 
 #### Packets Received per Interval vs. Number of Clients
 
-![Packets Received vs Clients](Graphs/ackets_Received_vs_Clients.png)
+![Packets Received vs Clients](Graphs/Packets_Received_vs_Clients.png)
 
-#### Total Messages Processed vs. Number of Clients
+#### Total Messages Processed vs. Number of Clients | with ideal performance
 
-![Total Messages Processed vs Clients](Graphs/Total_Messages_Processed_vs_Clients.png)
+![Total Messages Processed vs Clients](Graphs/Total_Messages_Processed_vs_Clients_with_Ideal_Gradient)
 
 ## Analysis
 
@@ -83,7 +79,8 @@ In this analysis, we evaluate the performance of our chat server by measuring ho
 
 Yes, running more clients significantly affected the server's performance. As the number of clients increased:
 
-- **Average Messages per Second**: The server processed more messages per second with more clients, but the rate of increase slowed down at higher client counts. For example, doubling the clients from 100 to 200 did not double the messages per second.
+- **Average Messages per Second**: The server shows a steady increase in the number of messages processed per second as the number of clients grows, but this increase slows down as the client count rises. Notably, doubling the clients from 100 to 200 does not result in a proportional doubling of the messages per second. I configured each spam client to send a message every 0.07 seconds, which translates to around 4284 messages being sent by a single client over a 5-minute period. In an ideal situation, the total number of messages processed should increase by 4284 for each additional client. However, the actual results closely follow this ideal line up to about 100 clients. Beyond this point, the server’s performance begins to deviate from the ideal, with the number of processed messages gradually falling behind. By the time the client count reaches around 200, the server hits a bottleneck, and the performance noticeably lags behind the ideal, as seen in the graph
+
 - **CPU Usage**: There was a substantial increase in CPU usage, from virtually 0% with 1 client to nearly 68% with 200 clients.
 - **Memory Usage**: Memory usage remained relatively constant around 12.6 MB, indicating that CPU and not memory was the bottleneck.
 - **Network Traffic**: Both bytes and packets sent and received per interval increased with the number of clients, indicating higher network load.
