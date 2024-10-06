@@ -79,11 +79,19 @@ In this analysis, we evaluate the performance of our chat server by measuring ho
 
 Yes, running more clients significantly affected the server's performance. As the number of clients increased:
 
-- **Average Messages per Second**: The server shows a steady increase in the number of messages processed per second as the number of clients grows, but this increase slows down as the client count rises. Notably, doubling the clients from 100 to 200 does not result in a proportional doubling of the messages per second. I configured each spam client to send a message every 0.07 seconds, which translates to around 4284 messages being sent by a single client over a 5-minute period. In an ideal situation, the total number of messages processed should increase by 4284 for each additional client. However, the actual results closely follow this ideal line up to about 100 clients. Beyond this point, the server’s performance begins to deviate from the ideal, with the number of processed messages gradually falling behind. By the time the client count reaches around 200, the server hits a bottleneck, and the performance noticeably lags behind the ideal, as seen in the graph
+- **Average Messages per Second**: The server shows a steady increase in the number of messages processed per second as the number of clients grows, but this increase slows down as the client count rises. Notably, doubling the clients from 100 to 200 does not result in a proportional doubling of the messages per second. I configured each spam client to send a message every 0.07 seconds, which translates to around 4284 messages being sent by a single client over a 5-minute period.
 
-- **CPU Usage**: There was a substantial increase in CPU usage, from virtually 0% with 1 client to nearly 68% with 200 clients.
+In an ideal situation, the total number of messages processed should increase by 4284 for each additional client. However, the actual results closely follow this ideal line up to about 100 clients. Beyond this point, the server’s performance begins to deviate from the ideal, with the number of processed messages gradually falling behind. By the time the client count reaches around 200, the server hits a bottleneck, and the performance noticeably lags behind the ideal, as seen in the graph
+
+- **CPU Usage**: The Average CPU Usage graph shows that CPU consumption climbs non-linearly, with significant increases after 100 clients. This suggests that the CPU becomes a primary bottleneck, contributing to the reduced throughput observed at higher client counts.
+
+The rapid increase in CPU usage beyond 150 clients correlates with the plateauing of throughput and packet handling, implying that the server’s CPU is nearing its capacity. At this point, the server has to prioritize which tasks to handle, reducing its ability to efficiently process messages and transmit/receive packets
+
 - **Memory Usage**: Memory usage remained relatively constant around 12.6 MB, indicating that CPU and not memory was the bottleneck.
-- **Network Traffic**: Both bytes and packets sent and received per interval increased with the number of clients, indicating higher network load.
+
+- **Packet Handling (Transmission and Reception)**: Both bytes and packets sent and received per interval increased with the number of clients, indicating higher network load. The Packets Sent and Packets Received graphs also both show a consistent, near-linear increase up to around 150 clients, after which the rate of growth slows down. Between 175 and 200 clients, the system reaches a clear bottleneck, where the number of packets sent and received begins to plateau.
+
+This suggests that the network and processing resources (e.g., CPU) are saturated, limiting the server’s ability to handle further increases in client traffic. The plateauing of packet handling mirrors the behavior of throughput and CPU usage, reinforcing the idea that the system has hit its upper limits for handling load
 
 ### Anecdotally, would you say the performance degrades linearly, quadratically, factorially? Why?
 

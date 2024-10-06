@@ -8,3 +8,7 @@ Run the Server.py file first by :
 Python Server.py
 
 then run the Client.py file, by giving the IP address of the host machine as a command line argument :
+
+Client.py 127.0.0.1
+
+The StressTesting Directory contains
