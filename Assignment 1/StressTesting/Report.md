@@ -74,6 +74,11 @@ In this analysis, we evaluate the performance of our chat server by measuring ho
 
 ![Total Messages Processed vs Clients](Graphs/Total_Messages_Processed_vs_Clients_with_Ideal_Gradient.png)
 
+#### Boxplots :
+
+![Boxplot](Graphs/box_plots_packets_bytes.png)
+![Boxplot](Graphs/box_plots_messages_cpu.png)
+
 ## Analysis
 
 ### Did running more clients affect the performance of your server?
