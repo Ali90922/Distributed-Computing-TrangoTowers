@@ -91,16 +91,20 @@ This suggests that the network and processing resources (e.g., CPU) are saturate
 
 ### Anecdotally, would you say the performance degrades linearly, quadratically, factorially? Why?
 
-Anecdotally, the performance degradation appears to be sub-linear initially but tends toward a plateau as the number of clients increases, suggesting a logarithmic trend.
-
-- **Throughput**: The increase in average messages per second does not scale linearly with the number of clients. For instance, increasing clients from 1 to 2 more than doubles the messages per second, but increasing from 175 to 200 clients results in a smaller relative increase.
-- **CPU Saturation**: The CPU usage increases significantly with more clients, suggesting that the CPU becomes a limiting factor. This non-linear increase in CPU usage contributes to the diminishing returns in throughput.
-- **Conclusion**: The server's performance does not degrade quadratically or factorially; instead, it shows diminishing returns due to resource saturation, primarily CPU limitations.
+Anecdotally, the performance degradation appears to follow a logarithmic trend rather than a linear, quadratic, or factorial pattern. Initially, the server scales well, but after around 100 clients, the gains in throughput slow down, and bottlenecks form between 200 and 225 clients. This behavior suggests that as resources—particularly CPU—become saturated, the server’s ability to handle additional load diminishes, resulting in sub-linear performance degradation
 
 ### What do you conclude?
 
-We conclude that while the server can handle an increasing number of clients, its performance does not scale proportionally. The diminishing returns in throughput and the significant increase in CPU usage indicate that the server has scalability limitations.
+We conclude that while the server can handle an increasing number of clients, its performance does not scale proportionally, especially beyond 100 clients, where diminishing returns become more pronounced. The Total Messages Processed graph closely follows the ideal performance up to around 100 clients, but deviates significantly as client numbers increase, with noticeable bottlenecks forming between 175 and 200 clients.
 
-- **Scalability**: The server scales reasonably well up to around 100 clients. Beyond this point, the performance gains diminish, and CPU usage becomes a concern.
-- **Bottlenecks**: CPU usage is the primary bottleneck as memory usage remains stable. Optimizing CPU performance could improve scalability.
-- **Recommendations**: To enhance performance, we could optimize the server code for better concurrency, use more efficient algorithms, or distribute the load across multiple servers.
+Scalability: The server scales efficiently up to around 100 clients, processing approximately 419,027 total messages with a CPU usage of 16.25%. However, beyond 100 clients, the performance deteriorates, with only 771,403 total messages processed at 200 clients—far short of the expected 856,800 based on ideal scaling. CPU usage spikes to 67.97% at 200 clients, indicating that the server is unable to keep up with the increasing load.
+
+Bottlenecks: The primary bottleneck is CPU saturation. While memory usage remains relatively stable at around 12.75 MB across all client counts, CPU usage rises non-linearly, jumping from 16.25% at 100 clients to 67.97% at 200 clients. The packets sent and received also show signs of plateauing beyond 150 clients, reinforcing the conclusion that CPU resources are being exhausted.
+Technical Recommendations: To improve scalability and performance:
+
+Optimize concurrency: Refactoring the server code to use more efficient concurrency mechanisms, such as asynchronous I/O or non-blocking event loops, could reduce CPU strain and improve packet handling.
+Load distribution: Offloading the processing load to multiple servers or using a load balancer could distribute client requests more evenly, preventing resource saturation.
+
+Algorithm optimization: Rewriting critical sections of the code with more efficient algorithms could reduce processing time, especially under high load conditions. Additionally, offloading non-critical tasks to worker threads or background processes could further free up CPU resources for handling client requests.
+
+In conclusion, while the server performs well under small to moderate loads, it experiences significant performance degradation at higher client counts due to CPU limitations. Optimizing the code and distributing the load could substantially enhance the server’s ability to scale effectively.
