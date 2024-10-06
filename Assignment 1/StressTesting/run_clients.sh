@@ -26,3 +26,6 @@ echo "Running with $num_clients clients connecting to $server_ip..."
 for ((i = 1; i <= num_clients; i++)); do
     run_client $i
 done
+
+
+# How to run this file : ./run_clients.sh 10 192.168.1.100
