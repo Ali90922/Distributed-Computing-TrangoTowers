@@ -26,6 +26,17 @@ The `StressTesting` directory contains tools for performance testing the chat se
 - **spamClient.py**: A client script that sends frequent, automated messages to the server.
 - **run_clients.sh**: A bash script for automating client connections during testing.
 
+
+
+### IMPORTANT Note on PSUTIL
+
+The stress testing setup requires the psutil library to log CPU metrics. To install psutil, run:
+```bash
+   pip install psutil
+   ```
+This command will install psutil and allow the stress testing scripts to record CPU and memory metrics during testing.
+
+
 ### Running the Stress Test
 1. Start the modified server with logging enabled by running:
    ```bash
@@ -46,4 +57,3 @@ The `StressTesting` directory contains tools for performance testing the chat se
 
 ---
 
-This README provides instructions for running the chat server and client, along with details on setting up and executing stress tests.
