@@ -19,6 +19,8 @@ This repository contains the Chat Server and Client for a simple TCP-based chatr
    ```
    Replace `<host_ip_address>` with the actual IP address of the server (e.g., `130.179.28.117`).
 
+To shut down the server, type "quit" on the server's command line. For a user to log out of the chatroom, the user should send a "quit" message, which will disconnect them from the server
+
 ## Part 2: Stress Testing
 
 The `StressTesting` directory contains tools for performance testing the chat server, including:
