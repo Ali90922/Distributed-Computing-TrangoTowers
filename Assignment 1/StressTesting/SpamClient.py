@@ -22,7 +22,7 @@ recv_buffer_size = 34768  # You can adjust this to a higher value
 client.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, send_buffer_size)
 client.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, recv_buffer_size)
 
-client.connect((server_ip, 55456))  # Use server_ip from the command-line arguments
+client.connect((server_ip, 8547))  # Use server_ip from the command-line arguments
 client.setblocking(False)  # Make the socket non-blocking
 
 # Main loop to handle sending and receiving messages

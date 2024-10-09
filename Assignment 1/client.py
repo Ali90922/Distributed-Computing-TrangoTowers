@@ -12,7 +12,7 @@ if len(sys.argv) != 2:
 
 # Extract the host IP from the command-line argument
 host = sys.argv[1]
-port = 55456  # Hardcoded port number for the server connection
+port = 8547  # Hardcoded port number for the server connection
 
 # Ask the user to choose a nickname that will be used in the chatroom
 nickname = input("Choose a Nickname: ")

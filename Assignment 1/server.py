@@ -5,7 +5,7 @@ import sys
 
 # Server's host and port configuration
 host = '0.0.0.0'  # Listen on all interfaces
-port = 55456      # Port to listen on
+port = 8547      # Port to listen on
 
 # Connect to SQLite database (used for message storage)
 # check_same_thread=False allows multiple threads to use the same connection

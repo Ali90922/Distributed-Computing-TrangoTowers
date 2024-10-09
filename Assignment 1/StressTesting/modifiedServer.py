@@ -6,7 +6,7 @@ import psutil
 import errno
 
 host = '0.0.0.0'  # Update to the public IP of the server if needed
-port = 55456
+port = 8547
 
 # Create a server socket (IPv4 + TCP)
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
