@@ -1,3 +1,19 @@
+# ----------------------------------------------------------------------------------------------
+# Name: Ali Nawaz
+# Student number: 7951458
+# Course: COMP 3010, Distributed Computing
+# Instructor: Saulo Santos 
+# Assignment: Assignment 1, modifiedServer.py
+# 
+# Remarks: Modified Server for server logging 
+#
+#-------------------------------------------------------------------------------------------------
+
+
+
+
+
+
 import socket
 import select
 import time
