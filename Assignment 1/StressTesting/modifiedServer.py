@@ -6,7 +6,7 @@ import psutil
 import errno
 
 host = '0.0.0.0'  # Update to the public IP of the server if needed
-port = 8547
+port = 8547    # Use the assigned port on Aviary
 
 # Create a server socket (IPv4 + TCP)
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
