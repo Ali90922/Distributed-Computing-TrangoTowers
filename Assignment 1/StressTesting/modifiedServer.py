@@ -26,7 +26,7 @@ import socket
 import select
 import time
 import sys
-import psutil
+import psutil     # used for cpu logging -- have to install this on ur machine - instructions in readme !
 import errno
 
 host = '0.0.0.0'  # Update to the public IP of the server if needed
