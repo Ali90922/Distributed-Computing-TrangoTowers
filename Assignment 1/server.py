@@ -1,3 +1,18 @@
+# ----------------------------------------------------------------------------------------------
+# Name: Ali Nawaz
+# Student number: 7951458
+# Course: COMP 3010, Distributed Computing
+# Instructor: Saulo Santos 
+# Assignment: Assignment 1, server.py
+# 
+# Remarks:
+# - Implements a TCP server for chat communication on a specified port.
+# - Utilizes SQLite to store and retrieve chat messages persistently.
+# - Manages clients' connections and nicknames using non-blocking sockets and `select`.
+# - Broadcasts messages to all clients, including joining/leaving notifications.
+# - Gracefully handles server shutdown and client disconnection.
+#-------------------------------------------------------------------------------------------------
+
 import socket
 import sqlite3
 import select
