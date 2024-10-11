@@ -2,12 +2,25 @@
 # Name: Ali Nawaz
 # Student number: 7951458
 # Course: COMP 3010, Distributed Computing
-# Instructor: Saulo Santos 
+# Instructor: Saulo Santos
 # Assignment: Assignment 1, modifiedServer.py
 # 
-# Remarks: Modified Server for server logging 
-#
+# Remarks: This server script is an enhanced version with added logging functionality for performance monitoring.
+#          The server tracks CPU and memory usage, network statistics (bytes and packets sent/received), 
+#          and client activity in real-time. Non-blocking, single-threaded, and asynchronous I/O mechanisms 
+#          allow this server to handle multiple clients in a sequential loop.
+# 
+# Features:
+#    - Listens on a configurable IP and port (defaults to '0.0.0.0' on port 8547).
+#    - Performance logging every 20 seconds, capturing message rate, CPU/memory usage, and network stats.
+#    - Broadcast functionality to send messages to all clients, except the sender.
+#    - Error handling for socket errors, including handling full socket buffers and disconnections.
+#    - Controlled shutdown process with final performance logging.
+# 
+# Note: Non-multithreaded; it utilizes `select` for asynchronous I/O to support multiple clients without 
+#       multi-threading, making it CPU-bound to one core.
 #-------------------------------------------------------------------------------------------------
+
 
 import socket
 import select
