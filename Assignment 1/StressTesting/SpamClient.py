@@ -1,3 +1,17 @@
+# ----------------------------------------------------------------------------------------------
+# Name: Ali Nawaz
+# Student number: 7951458
+# Course: COMP 3010, Distributed Computing
+# Instructor: Saulo Santos 
+# Assignment: Assignment 1, Spam Client 
+# 
+# Remarks: Modified version of the client which spams 14.2 messages per second.  
+#
+#-------------------------------------------------------------------------------------------------
+
+
+
+
 import socket
 import select
 import sys
