@@ -6,7 +6,7 @@ num_clients=$1
 # Server IP passed as an argument
 server_ip=$2
 
-# Path to your Python client file
+# Path to my Python client file  - which is in the same directory
 client_script="SpamClient.py"
 
 # Function to run a single client
