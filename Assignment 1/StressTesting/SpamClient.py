@@ -2,13 +2,24 @@
 # Name: Ali Nawaz
 # Student number: 7951458
 # Course: COMP 3010, Distributed Computing
-# Instructor: Saulo Santos 
-# Assignment: Assignment 1, Spam Client 
+# Instructor: Saulo Santos
+# Assignment: Assignment 1, Spam Client
 # 
-# Remarks: Modified version of the client which spams 14.2 messages per second.  
+# Remarks: This client script sends approximately 14.2 messages per second to the server.
+#          The script supports asynchronous I/O for sending and receiving messages, while
+#          maintaining a specified spam rate to test server performance and handling.
+#          
+# Features:
+#    - Allows nickname and server IP input via command-line arguments.
+#    - Configurable buffer sizes to manage data load (default: send=16KB, receive=34KB).
+#    - Non-blocking I/O and `select` allow continuous message processing without interruption.
+#    - Sends a customizable spam message every 0.07 seconds, configurable for rate adjustments.
+#    - Connection error handling and graceful exit on disconnection or failure.
 #
+# Usage: python3 SpamClient.py <nickname> <server_ip>
+# 
+# Note: Adjust the `time.sleep(0.07)` for spam rate modification, if needed.
 #-------------------------------------------------------------------------------------------------
-
 
 
 
