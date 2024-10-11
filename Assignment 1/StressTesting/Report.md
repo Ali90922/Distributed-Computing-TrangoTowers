@@ -22,7 +22,7 @@ In this analysis, I evaluated the performance of our chat server by measuring ho
 
 ## Results
 
-### Summary of Data
+### Summary of Data (Average of 3 Experiments !)
 
 | Clients | Total Messages Processed | Elapsed Time (s) | Avg Messages/sec | Avg CPU Usage (%) | Avg Memory Usage (MB) | Avg Bytes Sent per Interval (MB) | Avg Bytes Received per Interval (MB) | Avg Packets Sent per Interval | Avg Packets Received per Interval | Avg CPU Frequency (MHz) |
 | ------- | ------------------------ | ---------------- | ---------------- | ----------------- | --------------------- | -------------------------------- | ------------------------------------ | ----------------------------- | --------------------------------- | ----------------------- |
