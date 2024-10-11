@@ -2,14 +2,14 @@
 
 ## Introduction
 
-In this analysis, we evaluate the performance of our chat server by measuring how it handles an increasing number of clients. The goal is to understand how the server scales and identify any performance bottlenecks as the client load increases.
+In this analysis, I evaluated the performance of our chat server by measuring how it handles an increasing number of clients. The goal is to understand how the server scales and identify any performance bottlenecks as the client load increases.
 
 ## Experimental Setup
 
 - **Server**: The chat server runs on a dedicated machine separate from the clients.
 - **Clients**: A test client sends messages as fast as possible while also listening for incoming messages.
-- **Number of Clients**: We conducted experiments with varying numbers of clients: 1, 2, 5, 10, 25, 50, 75, 100, 125, 150, 175, and 200.
-- **Duration**: Each experiment ran for approximately 5 minutes (~300 seconds).
+- **Number of Clients**: I conducted experiments with varying numbers of clients: 1, 2, 5, 10, 25, 50, 75, 100, 125, 150, 175, and 200.
+- **Duration**: Each experiment ran for approximately 5 minutes (~300 seconds), and we repeated each experiment 3 times; the data over here is the average of all 3 experiments.
 - **Metrics Collected**:
   - Total messages processed
   - Total elapsed time
