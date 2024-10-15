@@ -1,0 +1,2 @@
+Memcache for caching -- assignment 2
+so if we had a logins ystem - the key for this cache would be the -- Username and the value is loggIn -- which is just a boolean 
