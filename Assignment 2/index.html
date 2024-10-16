@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discordn’t Chat</title>
+</head>
+<body>
+    <h1>Welcome to Discordn’t</h1>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="Type your message here">
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        // Poll for new messages every 5 seconds
+        setInterval(pollMessages, 5000);
+
+        function displayMessages(messages) {
+            const messageDiv = document.getElementById('messages');
+            messageDiv.innerHTML = ''; // Clear existing messages
+            messages.forEach(msg => {
+                const p = document.createElement('p');
+                p.textContent = msg;
+                messageDiv.appendChild(p);
+            });
+        }
+
+        function pollMessages() {
+            fetch('/api/messages')
+                .then(response => response.json())
+                .then(data => displayMessages(data.messages))
+                .catch(error => console.error('Error fetching messages:', error));
+        }
+
+        function sendMessage() {
+            const message = document.getElementById('messageInput').value;
+            fetch('/api/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            }).then(response => {
+                if (response.ok) {
+                    pollMessages(); // Refresh messages after posting
+                }
+            }).catch(error => console.error('Error sending message:', error));
+        }
+    </script>
+</body>
+</html>
+

@@ -1,19 +1,3 @@
-# ----------------------------------------------------------------------------------------------
-# Name: Ali Nawaz
-# Student number: 7951458
-# Course: COMP 3010, Distributed Computing
-# Instructor: Saulo Santos 
-# Assignment: Assignment 1, client.py
-# 
-# Remarks: 
-# - Connects to a TCP chat server using IP input from the command line.
-# - Allows user to set a nickname, send and receive messages in real time.
-# - Uses non-blocking sockets with `select` for handling multiple inputs.
-# - Supports nickname input, message display, and exiting on "quit" command.
-# - Restores terminal settings upon exiting or disconnection.
-#-------------------------------------------------------------------------------------------------
-
-
 import socket
 import select
 import sys
