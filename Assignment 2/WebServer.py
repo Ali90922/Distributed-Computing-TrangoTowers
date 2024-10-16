@@ -1,6 +1,6 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
 import socket
 import json
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from http import cookies
 
 CHAT_SERVER_HOST = 'localhost'
@@ -34,6 +34,7 @@ class ChatWebServer(BaseHTTPRequestHandler):
         messages = ""
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(5)  # Set a timeout of 5 seconds
                 s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
                 s.sendall(b'GET_MESSAGES')
 
@@ -48,6 +49,7 @@ class ChatWebServer(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"messages": messages.splitlines()}).encode())
         except Exception as e:
+            print(f"Error in handle_get_messages: {e}")
             self.send_error(500, f"Failed to retrieve messages: {e}")
 
     def handle_post_message(self):
@@ -58,13 +60,17 @@ class ChatWebServer(BaseHTTPRequestHandler):
         nickname = data.get('nickname', 'Anonymous')  # Assign a default nickname if not provided
 
         try:
+            # Open a new connection for each message with a timeout
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(5)  # Set a timeout of 5 seconds
                 s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
-                # Send both nickname and message
-                s.sendall(f'SEND_MESSAGE {nickname}: {message}'.encode())
+                full_message = f'SEND_MESSAGE {nickname}: {message}'
+                s.sendall(full_message.encode())
+                print("Message sent successfully")
             self.send_response(201)
             self.end_headers()
         except Exception as e:
+            print(f"Error in handle_post_message: {e}")
             self.send_error(500, f"Failed to send message: {e}")
 
     def handle_login(self):
