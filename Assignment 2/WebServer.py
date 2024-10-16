@@ -53,12 +53,14 @@ class ChatWebServer(BaseHTTPRequestHandler):
     def handle_post_message(self):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
-        message = json.loads(post_data.decode())['message']
+        data = json.loads(post_data.decode())
+        message = data['message']
+        nickname = data.get('nickname', 'Anonymous')  # Assign a default nickname if not provided
 
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
-                s.sendall(f'SEND_MESSAGE {message}'.encode())
+                s.sendall(f'SEND_MESSAGE {nickname}: {message}'.encode())
             self.send_response(201)
             self.end_headers()
         except Exception as e:

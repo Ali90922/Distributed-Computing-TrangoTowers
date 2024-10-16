@@ -34,10 +34,11 @@
 
         function sendMessage() {
             const message = document.getElementById('messageInput').value;
+            const nickname = "yourNickname";  // Replace with the user's nickname
             fetch('/api/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message })
+                body: JSON.stringify({ message, nickname })
             }).then(response => {
                 if (response.ok) {
                     pollMessages(); // Refresh messages after posting
@@ -47,4 +48,3 @@
     </script>
 </body>
 </html>
-

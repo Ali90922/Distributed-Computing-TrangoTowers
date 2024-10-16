@@ -56,7 +56,12 @@ def handle_web_request(notified_socket, message):
         notified_socket.send(response.encode('ascii'))
     elif message.startswith('SEND_MESSAGE'):
         msg_content = message[len('SEND_MESSAGE '):].strip()
-        broadcast(msg_content, notified_socket)
+        if ": " in msg_content:  # Ensure message has a nickname
+            nickname, content = msg_content.split(": ", 1)
+            nicknames[notified_socket] = nickname.strip()
+            broadcast(content, notified_socket)
+        else:
+            broadcast(msg_content, notified_socket)
 
 def close_all_connections():
     print("Shutting down the server...")
