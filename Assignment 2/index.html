@@ -14,6 +14,7 @@
     <script>
         // Poll for new messages every 5 seconds
         setInterval(pollMessages, 5000);
+        pollMessages();  // Fetch messages immediately on page load to display history
 
         function displayMessages(messages) {
             const messageDiv = document.getElementById('messages');
@@ -23,12 +24,16 @@
                 p.textContent = msg;
                 messageDiv.appendChild(p);
             });
+            console.log("Displayed messages on the page:", messages);  // Debugging output
         }
 
         function pollMessages() {
             fetch('/api/messages')
                 .then(response => response.json())
-                .then(data => displayMessages(data.messages))
+                .then(data => {
+                    console.log("Fetched messages:", data.messages);  // Debugging output
+                    displayMessages(data.messages);
+                })
                 .catch(error => console.error('Error fetching messages:', error));
         }
 
@@ -36,7 +41,9 @@
             const messageInput = document.getElementById('messageInput');
             const message = messageInput.value;
             const nickname = "yourNickname";  // Replace with the user's nickname
-            
+
+            console.log("sendMessage called with message:", message); // Debugging output
+
             fetch('/api/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -45,6 +52,9 @@
                 if (response.ok) {
                     messageInput.value = ''; // Clear input field after sending
                     pollMessages(); // Refresh messages after posting
+                    console.log("Message sent successfully");
+                } else {
+                    console.error('Error in response:', response.statusText);
                 }
             }).catch(error => console.error('Error sending message:', error));
         }
