@@ -33,14 +33,17 @@
         }
 
         function sendMessage() {
-            const message = document.getElementById('messageInput').value;
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value;
             const nickname = "yourNickname";  // Replace with the user's nickname
+            
             fetch('/api/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message, nickname })
             }).then(response => {
                 if (response.ok) {
+                    messageInput.value = ''; // Clear input field after sending
                     pollMessages(); // Refresh messages after posting
                 }
             }).catch(error => console.error('Error sending message:', error));

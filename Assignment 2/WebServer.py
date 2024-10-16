@@ -60,6 +60,7 @@ class ChatWebServer(BaseHTTPRequestHandler):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
+                # Send both nickname and message
                 s.sendall(f'SEND_MESSAGE {nickname}: {message}'.encode())
             self.send_response(201)
             self.end_headers()
