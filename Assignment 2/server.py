@@ -152,7 +152,7 @@ def run_server():
                         else:
                             nicknames[notified_socket] = message
                             clients[notified_socket] = message
-                            broadcast(f'{message} joined the chat!', notified_socket)
+                            #broadcast(f'{message} joined the chat!', notified_socket)
                             load_messages(notified_socket)
                     else:
                         broadcast(f"{clients[notified_socket]}: {message}", notified_socket)
@@ -163,7 +163,8 @@ def run_server():
                         sockets_list.remove(notified_socket)
                     notified_socket.close()
                     if nickname:
-                        broadcast(f'{nickname} has left the chat.')
+                        #broadcast(f'{nickname} has left the chat.')
+                        z = 1 +1
                     print(f"Error handling client: {e}")
 
 run_server()
