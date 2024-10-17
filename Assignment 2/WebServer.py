@@ -72,7 +72,7 @@ class ChatWebServer(BaseHTTPRequestHandler):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.settimeout(5)
                 s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
-                full_message = f'SEND_MESSAGE {nickname}: {message}'
+                full_message = f'{nickname}: {message}'  # Include nickname explicitly in the message
                 s.sendall(full_message.encode())
                 print(f"Message sent successfully: {full_message}")
             self.send_response(201)
