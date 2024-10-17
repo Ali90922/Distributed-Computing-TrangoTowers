@@ -80,6 +80,9 @@
                 if (xhr.readyState == 4 && xhr.status == 200) {
                     const data = JSON.parse(xhr.responseText);
                     displayMessages(data.messages);
+
+                    // Poll again after 1 second
+                    setTimeout(pollMessages, 1000); // Adjust interval as needed
                 }
             };
             xhr.send();
