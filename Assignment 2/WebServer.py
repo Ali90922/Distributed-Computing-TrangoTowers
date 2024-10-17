@@ -57,11 +57,16 @@ class ChatWebServer(BaseHTTPRequestHandler):
         post_data = self.rfile.read(content_length)
         data = json.loads(post_data.decode())
         message = data['message']
-        nickname = data.get('nickname', 'Anonymous') 
+        
+        # Retrieve nickname from cookie if available
+        nickname = None
+        if "Cookie" in self.headers:
+            c = cookies.SimpleCookie(self.headers["Cookie"])
+            nickname = c.get("nickname").value if "nickname" in c else None
 
+        # Ensure nickname is not empty
         if not nickname:
-            self.send_error(401, "Unauthorized: No nickname provided")
-            return
+            nickname = "Anonymous"  # Fallback if nickname is missing
 
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -69,7 +74,7 @@ class ChatWebServer(BaseHTTPRequestHandler):
                 s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
                 full_message = f'SEND_MESSAGE {nickname}: {message}'
                 s.sendall(full_message.encode())
-                print("Message sent successfully")
+                print(f"Message sent successfully: {full_message}")
             self.send_response(201)
             self.end_headers()
         except Exception as e:
@@ -82,6 +87,7 @@ class ChatWebServer(BaseHTTPRequestHandler):
         data = json.loads(post_data.decode())
         nickname = data.get('nickname', 'Anonymous')
 
+        # Set the nickname as a cookie
         c = cookies.SimpleCookie()
         c['nickname'] = nickname
         c['nickname']['httponly'] = True

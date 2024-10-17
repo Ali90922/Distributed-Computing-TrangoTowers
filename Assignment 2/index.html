@@ -37,6 +37,11 @@
             const nicknameInput = document.getElementById("nicknameInput");
             const nickname = nicknameInput.value;
 
+            if (!nickname) {
+                alert("Please enter a nickname.");
+                return;
+            }
+
             const xhr = new XMLHttpRequest();
             xhr.open("POST", "/api/login", true);
             xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
@@ -59,7 +64,6 @@
         function sendMessage() {
             const messageInput = document.getElementById("messageInput");
             const message = messageInput.value;
-            const nickname = getCookie("nickname");
 
             const xhr = new XMLHttpRequest();
             xhr.open("POST", "/api/messages", true);
@@ -70,7 +74,7 @@
                     pollMessages();
                 }
             };
-            xhr.send(JSON.stringify({ message, nickname }));
+            xhr.send(JSON.stringify({ message }));
         }
 
         function pollMessages() {
@@ -101,7 +105,7 @@
         function getCookie(name) {
             const value = "; " + document.cookie;
             const parts = value.split("; " + name + "=");
-            if (parts.length == 2) return parts.pop().split(";").shift();
+            if (parts.length === 2) return parts.pop().split(";").shift();
         }
     </script>
 </body>
