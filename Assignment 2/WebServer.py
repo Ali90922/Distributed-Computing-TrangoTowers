@@ -34,7 +34,7 @@ class ChatWebServer(BaseHTTPRequestHandler):
         messages = ""
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(5)  # Set a timeout of 5 seconds
+                s.settimeout(5)
                 s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
                 s.sendall(b'GET_MESSAGES')
 
@@ -57,12 +57,15 @@ class ChatWebServer(BaseHTTPRequestHandler):
         post_data = self.rfile.read(content_length)
         data = json.loads(post_data.decode())
         message = data['message']
-        nickname = data.get('nickname', 'Anonymous')  # Assign a default nickname if not provided
+        nickname = data.get('nickname', 'Anonymous') 
+
+        if not nickname:
+            self.send_error(401, "Unauthorized: No nickname provided")
+            return
 
         try:
-            # Open a new connection for each message with a timeout
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(5)  # Set a timeout of 5 seconds
+                s.settimeout(5)
                 s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
                 full_message = f'SEND_MESSAGE {nickname}: {message}'
                 s.sendall(full_message.encode())
@@ -74,16 +77,21 @@ class ChatWebServer(BaseHTTPRequestHandler):
             self.send_error(500, f"Failed to send message: {e}")
 
     def handle_login(self):
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        data = json.loads(post_data.decode())
+        nickname = data.get('nickname', 'Anonymous')
+
         c = cookies.SimpleCookie()
-        c['username'] = "some_username"
-        c['username']['httponly'] = True
+        c['nickname'] = nickname
+        c['nickname']['httponly'] = True
         self.send_response(200)
         self.send_header('Set-Cookie', c.output(header='', sep=''))
         self.end_headers()
 
     def handle_logout(self):
         self.send_response(200)
-        self.send_header('Set-Cookie', 'username=; Max-Age=0')
+        self.send_header('Set-Cookie', 'nickname=; Max-Age=0')
         self.end_headers()
 
 def run_server():
