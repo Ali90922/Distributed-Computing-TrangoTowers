@@ -1,0 +1,21 @@
+How to run this : 
+
+Open three new terminal tabs and navigate to the following directory 
+/Users/Ali_Nawaz/music/Distributed-Computing-TrangoTowers
+
+
+First have to make sure that the server is running by : 
+
+python server.py 
+
+Then run the web Server as well by :
+
+python WebServer.py
+
+Then run the client for debugging purposes
+
+python 
+
+python client.py 127.0.0.1
+
+
