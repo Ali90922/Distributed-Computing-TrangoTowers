@@ -2,6 +2,8 @@ import socket
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from http import cookies
+from http.server import ThreadingHTTPServer  # Import ThreadingHTTPServer
+
 
 CHAT_SERVER_HOST = 'localhost'
 CHAT_SERVER_PORT = 8547
@@ -102,11 +104,12 @@ class ChatWebServer(BaseHTTPRequestHandler):
         self.end_headers()
 
 def run_server():
-    """Runs the web server."""
+    """Runs the multi-threaded web server."""
     server_address = ('', WEB_SERVER_PORT)
-    httpd = HTTPServer(server_address, ChatWebServer)
-    print(f'Starting web server on port {WEB_SERVER_PORT}')
+    httpd = ThreadingHTTPServer(server_address, ChatWebServer)  # Use ThreadingHTTPServer here
+    print(f'Starting multi-threaded web server on port {WEB_SERVER_PORT}')
     httpd.serve_forever()
+
 
 if __name__ == '__main__':
     run_server()
