@@ -4,15 +4,97 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Discordn’t Chat</title>
+    <style>
+        /* Basic reset */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Center the login and chat containers */
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f0f5;
+        }
+
+        #login, #chat {
+            width: 90%;
+            max-width: 400px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Styling for inputs and buttons */
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Messages container styling */
+        #messages {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+
+        #messages p {
+            margin-bottom: 5px;
+            padding: 8px;
+            background-color: #e9e9ff;
+            border-radius: 4px;
+        }
+
+        /* Hide login and chat containers initially */
+        #login, #chat {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <div id="login" style="display: none;">
+    <div id="login">
         <h2>Login</h2>
         <input type="text" id="nicknameInput" placeholder="Enter your nickname">
         <button onclick="login()">Login</button>
     </div>
 
-    <div id="chat" style="display: none;">
+    <div id="chat">
         <h1>Welcome to Discordn’t</h1>
         <div id="messages"></div>
         <input type="text" id="messageInput" placeholder="Type your message here">
