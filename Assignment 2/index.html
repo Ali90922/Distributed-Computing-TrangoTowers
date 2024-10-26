@@ -13,19 +13,23 @@
             font-family: Arial, sans-serif;
         }
 
-        /* Center the login and chat containers */
+        /* Set background image */
         body {
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            background-color: #f0f0f5;
+            background-image: url('mojave-day.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
 
+        /* Center the login and chat containers */
         #login, #chat {
             width: 90%;
             max-width: 400px;
-            background: #fff;
+            background: rgba(255, 255, 255, 0.9); /* Slight transparency */
             border-radius: 8px;
             padding: 20px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
