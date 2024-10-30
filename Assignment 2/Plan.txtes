@@ -12,8 +12,8 @@ Then run the web Server as well by :
 
 python WebServer.py
 
-Then run the client for debugging purposes
- 
+Then run the client for debugging purpose
+
 python client.py 127.0.0.1
 
 
