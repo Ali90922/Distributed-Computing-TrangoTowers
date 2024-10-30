@@ -34,6 +34,7 @@ def handle_get_request(client, path):
         send_response_header(client, "404 Not Found")
         client.send(b"<h1>404 Not Found</h1>")
 
+
 # Handle POST requests
 def handle_post_request(client, path, headers, body):
     if path == '/api/messages':
@@ -70,7 +71,20 @@ def handle_get_messages(client):
 
 def handle_post_message(client, headers, body):
     """Send a new message to the chat server."""
-    data = json.loads(body)
+    if not body.strip():
+        # Handle empty body case
+        send_response_header(client, "400 Bad Request")
+        client.send(b"Empty request body")
+        return
+    
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError:
+        # Handle malformed JSON
+        send_response_header(client, "400 Bad Request")
+        client.send(b"Malformed JSON data")
+        return
+
     message = data.get('message', '')
     
     # Retrieve nickname from cookie if available
@@ -81,7 +95,7 @@ def handle_post_message(client, headers, body):
 
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(5)
+            s.settimeout(5)  # Reduced timeout for quicker response
             s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
             full_message = f'SEND_MESSAGE {nickname}: {message}'
             s.sendall(full_message.encode('ascii'))
@@ -94,9 +108,23 @@ def handle_post_message(client, headers, body):
         send_response_header(client, "500 Internal Server Error")
         client.send(f"Failed to send message: {e}".encode())
 
+
 def handle_login(client, body):
     """Log in user and set a cookie."""
-    data = json.loads(body)
+    if not body.strip():
+        # Handle empty body case
+        send_response_header(client, "400 Bad Request")
+        client.send(b"Empty request body")
+        return
+    
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError:
+        # Handle malformed JSON
+        send_response_header(client, "400 Bad Request")
+        client.send(b"Malformed JSON data")
+        return
+
     nickname = data.get('nickname', 'Anonymous')
 
     # Set the nickname as a cookie
@@ -106,6 +134,8 @@ def handle_login(client, body):
 
     send_response_header(client, "200 OK", headers={"Set-Cookie": c.output(header='', sep='')})
     client.send(b"Logged in")
+
+
 
 def handle_logout(client):
     """Logs out a user by clearing the nickname cookie."""
