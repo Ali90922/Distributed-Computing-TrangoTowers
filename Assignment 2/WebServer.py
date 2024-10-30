@@ -1,115 +1,154 @@
 import socket
+import threading
 import json
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import re
 from http import cookies
-from http.server import ThreadingHTTPServer  # Import ThreadingHTTPServer
-
 
 CHAT_SERVER_HOST = 'localhost'
 CHAT_SERVER_PORT = 8547
 WEB_SERVER_PORT = 8000
 
-class ChatWebServer(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == '/':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
+# Basic response headers
+def send_response_header(client, status_code, content_type="text/html", headers=None):
+    client.send(f"HTTP/1.1 {status_code}\r\n".encode())
+    client.send(f"Content-Type: {content_type}\r\n".encode())
+    if headers:
+        for header, value in headers.items():
+            client.send(f"{header}: {value}\r\n".encode())
+    client.send("\r\n".encode())
+
+# Handle GET requests
+def handle_get_request(client, path):
+    if path == '/':
+        # Serve index.html file
+        try:
             with open('index.html', 'rb') as file:
-                self.wfile.write(file.read())
-        elif self.path == '/api/messages':
-            self.handle_get_messages()
-        else:
-            self.send_error(404, "File not found")
+                send_response_header(client, "200 OK", "text/html")
+                client.send(file.read())
+        except FileNotFoundError:
+            send_response_header(client, "404 Not Found")
+            client.send(b"<h1>404 Not Found</h1>")
+    elif path.startswith('/api/messages'):
+        handle_get_messages(client)
+    else:
+        send_response_header(client, "404 Not Found")
+        client.send(b"<h1>404 Not Found</h1>")
 
-    def do_POST(self):
-        if self.path == '/api/messages':
-            self.handle_post_message()
-        elif self.path == '/api/login':
-            self.handle_login()
-        elif self.path == '/api/logout':
-            self.handle_logout()
-        else:
-            self.send_error(404, "API endpoint not found")
+# Handle POST requests
+def handle_post_request(client, path, headers, body):
+    if path == '/api/messages':
+        handle_post_message(client, headers, body)
+    elif path == '/api/login':
+        handle_login(client, body)
+    elif path == '/api/logout':
+        handle_logout(client)
+    else:
+        send_response_header(client, "404 Not Found")
+        client.send(b"<h1>404 Not Found</h1>")
 
-    def handle_get_messages(self):
-        """Retrieves the latest messages from the chat server."""
-        messages = ""
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(5)
-                s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
-                s.sendall(b'GET_MESSAGES')
-
-                while True:
-                    chunk = s.recv(1024)
-                    if not chunk:
-                        break
-                    messages += chunk.decode('ascii')
-
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({"messages": messages.splitlines()}).encode())
-        except Exception as e:
-            print(f"Error in handle_get_messages: {e}")
-            self.send_error(500, f"Failed to retrieve messages: {e}")
-
-    def handle_post_message(self):
-        """Sends a message from the web client to the chat server."""
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length)
-        data = json.loads(post_data.decode())
-        message = data.get('message', '')
-
-        # Retrieve nickname from cookie if available
-        nickname = "Anonymous"  # Default nickname
-        if "Cookie" in self.headers:
-            c = cookies.SimpleCookie(self.headers["Cookie"])
-            nickname = c.get("nickname").value if "nickname" in c else nickname
-
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(5)
-                s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
-                full_message = f'SEND_MESSAGE {nickname}: {message}'
-                s.sendall(full_message.encode('ascii'))
-                print(f"Message sent successfully: {full_message}")
+def handle_get_messages(client):
+    """Retrieve messages from chat server."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(5)
+            s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
+            s.sendall(b'GET_MESSAGES')
             
-            self.send_response(201)
-            self.end_headers()
-        except Exception as e:
-            print(f"Error in handle_post_message: {e}")
-            self.send_error(500, f"Failed to send message: {e}")
+            messages = ""
+            while True:
+                chunk = s.recv(1024)
+                if not chunk:
+                    break
+                messages += chunk.decode('ascii')
 
-    def handle_login(self):
-        """Logs in a user by setting a nickname cookie."""
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length)
-        data = json.loads(post_data.decode())
-        nickname = data.get('nickname', 'Anonymous')
+        send_response_header(client, "200 OK", "application/json")
+        client.send(json.dumps({"messages": messages.splitlines()}).encode())
+    except Exception as e:
+        print(f"Error in handle_get_messages: {e}")
+        send_response_header(client, "500 Internal Server Error")
+        client.send(f"Failed to retrieve messages: {e}".encode())
 
-        # Set the nickname as a cookie
-        c = cookies.SimpleCookie()
-        c['nickname'] = nickname
-        c['nickname']['httponly'] = True
-        self.send_response(200)
-        self.send_header('Set-Cookie', c.output(header='', sep=''))
-        self.end_headers()
+def handle_post_message(client, headers, body):
+    """Send a new message to the chat server."""
+    data = json.loads(body)
+    message = data.get('message', '')
+    
+    # Retrieve nickname from cookie if available
+    nickname = "Anonymous"
+    if "Cookie" in headers:
+        c = cookies.SimpleCookie(headers["Cookie"])
+        nickname = c.get("nickname").value if "nickname" in c else nickname
 
-    def handle_logout(self):
-        """Logs out a user by clearing the nickname cookie."""
-        self.send_response(200)
-        self.send_header('Set-Cookie', 'nickname=; Max-Age=0')
-        self.end_headers()
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(5)
+            s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
+            full_message = f'SEND_MESSAGE {nickname}: {message}'
+            s.sendall(full_message.encode('ascii'))
+            print(f"Message sent successfully: {full_message}")
+
+        send_response_header(client, "201 Created")
+        client.send(b"Message sent")
+    except Exception as e:
+        print(f"Error in handle_post_message: {e}")
+        send_response_header(client, "500 Internal Server Error")
+        client.send(f"Failed to send message: {e}".encode())
+
+def handle_login(client, body):
+    """Log in user and set a cookie."""
+    data = json.loads(body)
+    nickname = data.get('nickname', 'Anonymous')
+
+    # Set the nickname as a cookie
+    c = cookies.SimpleCookie()
+    c['nickname'] = nickname
+    c['nickname']['httponly'] = True
+
+    send_response_header(client, "200 OK", headers={"Set-Cookie": c.output(header='', sep='')})
+    client.send(b"Logged in")
+
+def handle_logout(client):
+    """Logs out a user by clearing the nickname cookie."""
+    send_response_header(client, "200 OK", headers={"Set-Cookie": "nickname=; Max-Age=0"})
+    client.send(b"Logged out")
+
+def handle_client(client):
+    """Handles each client connection."""
+    request = client.recv(1024).decode()
+    headers, body = request.split('\r\n\r\n', 1)
+    request_line, *header_lines = headers.splitlines()
+    
+    # Parse request line
+    method, path, _ = request_line.split()
+    header_dict = {}
+    
+    # Parse headers
+    for line in header_lines:
+        key, value = line.split(":", 1)
+        header_dict[key.strip()] = value.strip()
+
+    # Route based on HTTP method
+    if method == 'GET':
+        handle_get_request(client, path)
+    elif method == 'POST':
+        handle_post_request(client, path, header_dict, body)
+    else:
+        send_response_header(client, "405 Method Not Allowed")
+        client.send(b"Method Not Allowed")
+
+    client.close()
 
 def run_server():
-    """Runs the multi-threaded web server."""
-    server_address = ('', WEB_SERVER_PORT)
-    httpd = ThreadingHTTPServer(server_address, ChatWebServer)  # Use ThreadingHTTPServer here
-    print(f'Starting multi-threaded web server on port {WEB_SERVER_PORT}')
-    httpd.serve_forever()
-
+    """Runs the multi-threaded server using socket and threading."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+        server.bind(('', WEB_SERVER_PORT))
+        server.listen(5)
+        print(f'Starting server on port {WEB_SERVER_PORT}...')
+        
+        while True:
+            client, addr = server.accept()
+            print(f"Connection from {addr}")
+            threading.Thread(target=handle_client, args=(client,)).start()
 
 if __name__ == '__main__':
     run_server()
