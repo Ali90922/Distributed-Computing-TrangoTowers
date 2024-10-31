@@ -1,12 +1,11 @@
 import socket
 import json
 from http import cookies
-from concurrent.futures import ThreadPoolExecutor
+import threading
 
 CHAT_SERVER_HOST = 'localhost'
 CHAT_SERVER_PORT = 8547
 WEB_SERVER_PORT = 8000
-MAX_THREADS = 10  # Limit the number of concurrent threads
 
 # Basic response headers
 def send_response_header(client, status_code, content_type="text/html", headers=None):
@@ -96,7 +95,7 @@ def handle_post_message(client, headers, body):
 
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(5)  # Timeout for the chat server connection
+            s.settimeout(5)
             s.connect((CHAT_SERVER_HOST, CHAT_SERVER_PORT))
             full_message = f'SEND_MESSAGE {nickname}: {message}'
             s.sendall(full_message.encode('ascii'))
@@ -164,11 +163,11 @@ def run_server():
         server.listen(5)
         print(f'Starting server on port {WEB_SERVER_PORT}...')
         
-        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            while True:
-                client, addr = server.accept()
-                print(f"Connection from {addr}")
-                executor.submit(handle_client, client)
+        while True:
+            client, addr = server.accept()
+            print(f"Connection from {addr}")
+            # Start a new thread for each client connection
+            threading.Thread(target=handle_client, args=(client,)).start()
 
 if __name__ == '__main__':
     run_server()
