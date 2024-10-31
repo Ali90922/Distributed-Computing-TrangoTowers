@@ -2,6 +2,8 @@ import socket
 import json
 from http import cookies
 import threading
+import os
+import mimetypes
 
 CHAT_SERVER_HOST = 'localhost'
 CHAT_SERVER_PORT = 8547
@@ -18,20 +20,37 @@ def send_response_header(client, status_code, content_type="text/html", headers=
 
 # Handle GET requests
 def handle_get_request(client, path):
+    # If path is root, serve index.html
     if path == '/':
-        # Serve index.html file
-        try:
-            with open('index.html', 'rb') as file:
-                send_response_header(client, "200 OK", "text/html")
-                client.send(file.read())
-        except FileNotFoundError:
+        path = '/index.html'
+
+    # Remove leading slash for file path resolution
+    file_path = path.lstrip('/')
+    
+    # Check if path starts with /api/, then call the appropriate API handler
+    if path.startswith('/api/'):
+        if path == '/api/messages':
+            handle_get_messages(client)
+        else:
+            send_response_header(client, "404 Not Found")
+            client.send(b"<h1>API Endpoint Not Found</h1>")
+    else:
+        # Serve static files if they exist
+        if os.path.isfile(file_path):
+            content_type, _ = mimetypes.guess_type(file_path)
+            content_type = content_type or "application/octet-stream"
+            try:
+                with open(file_path, 'rb') as file:
+                    send_response_header(client, "200 OK", content_type)
+                    client.send(file.read())
+            except Exception as e:
+                print(f"Error serving file {file_path}: {e}")
+                send_response_header(client, "500 Internal Server Error")
+                client.send(b"<h1>500 Internal Server Error</h1>")
+        else:
+            # File not found
             send_response_header(client, "404 Not Found")
             client.send(b"<h1>404 Not Found</h1>")
-    elif path.startswith('/api/messages'):
-        handle_get_messages(client)
-    else:
-        send_response_header(client, "404 Not Found")
-        client.send(b"<h1>404 Not Found</h1>")
 
 # Handle POST requests
 def handle_post_request(client, path, headers, body):
@@ -43,7 +62,7 @@ def handle_post_request(client, path, headers, body):
         handle_logout(client)
     else:
         send_response_header(client, "404 Not Found")
-        client.send(b"<h1>404 Not Found</h1>")
+        client.send(b"<h1>API Endpoint Not Found</h1>")
 
 def handle_get_messages(client):
     """Retrieve messages from chat server."""
@@ -166,7 +185,6 @@ def run_server():
         while True:
             client, addr = server.accept()
             print(f"Connection from {addr}")
-            # Start a new thread for each client connection
             threading.Thread(target=handle_client, args=(client,)).start()
 
 if __name__ == '__main__':
