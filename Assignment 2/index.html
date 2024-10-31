@@ -13,16 +13,16 @@
             font-family: Arial, sans-serif;
         }
 
-        /* Set background image from external URL */
+        /* Set up body for background image carousel */
         body {
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            background-image: url('http://safarnamaaa.ca/Karimabad.JPG');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            transition: background-image 1s ease-in-out; /* Smooth transition */
         }
 
         /* Center the login and chat containers */
@@ -108,7 +108,6 @@
     <div id="chat">
         <h1>Welcome to Discordn’t</h1>
         <div id="messages"></div>
-        <!-- Add onkeypress event to listen for Enter key press -->
         <input type="text" id="messageInput" placeholder="Type your message here" onkeypress="checkEnter(event)">
         <button onclick="sendMessage()">Send</button>
     </div>
@@ -116,7 +115,24 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             checkLoginStatus();
+            startBackgroundCarousel();  // Start carousel on page load
         });
+
+        // Background carousel images in the Assets folder
+        const images = [
+            'Assets/IMG11.jpg',
+            'Assets/Karimabad.JPG',
+            'Assets/Khaplu.jpg',
+            'Assets/Nangma.JPG'
+        ];
+
+        let currentImageIndex = 0;
+        function startBackgroundCarousel() {
+            setInterval(() => {
+                currentImageIndex = (currentImageIndex + 1) % images.length;
+                document.body.style.backgroundImage = `url('${images[currentImageIndex]}')`;
+            }, 5000); // Change image every 5 seconds
+        }
 
         function checkLoginStatus() {
             const nickname = getCookie("nickname");
@@ -184,8 +200,6 @@
                 if (xhr.readyState == 4 && xhr.status == 200) {
                     const data = JSON.parse(xhr.responseText);
                     displayMessages(data.messages);
-
-                    // Poll again after 1 second
                     setTimeout(pollMessages, 1000); // Adjust interval as needed
                 }
             };
