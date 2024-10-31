@@ -17,3 +17,12 @@ Then run the client for debugging purposes
 python client.py 127.0.0.1
 
 
+How to run the ScreenScraper program : 
+First compile the program with make : 
+
+make 
+
+and then run your program with:
+
+./screen_scraper [host] [port] [username] [message]
+
