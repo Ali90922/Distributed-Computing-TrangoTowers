@@ -17,12 +17,13 @@
         body {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; /* Aligns to the left side */
             min-height: 100vh;
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             transition: background-image 1s ease-in-out; /* Smooth transition */
+            padding-left: 20px; /* Optional padding to adjust left alignment */
         }
 
         /* Center the login and chat containers */
@@ -106,7 +107,7 @@
     </div>
 
     <div id="chat">
-        <h1>Welcome to Discordn’t</h1>
+        <h1>Discordn’t</h1>
         <div id="messages"></div>
         <input type="text" id="messageInput" placeholder="Type your message here" onkeypress="checkEnter(event)">
         <button onclick="sendMessage()">Send</button>
@@ -131,7 +132,7 @@
             setInterval(() => {
                 currentImageIndex = (currentImageIndex + 1) % images.length;
                 document.body.style.backgroundImage = `url('${images[currentImageIndex]}')`;
-            }, 5000); // Change image every 5 seconds
+            }, 7000); // Change image every 5 seconds
         }
 
         function checkLoginStatus() {
