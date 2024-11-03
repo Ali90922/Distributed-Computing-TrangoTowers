@@ -7,7 +7,7 @@ import mimetypes
 
 CHAT_SERVER_HOST = 'localhost'
 CHAT_SERVER_PORT = 8547
-WEB_SERVER_PORT = 8000
+WEB_SERVER_PORT = 8548
 
 # Basic response headers
 def send_response_header(client, status_code, content_type="text/html", headers=None):
