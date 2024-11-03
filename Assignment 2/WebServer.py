@@ -144,6 +144,7 @@ def handle_login(client, body):
     c = cookies.SimpleCookie()
     c['nickname'] = nickname
     c['nickname']['httponly'] = True
+    c['nickname']['max-age'] = 3600 * 24 * 30  # Cookie lasts for 30 days
 
     send_response_header(client, "200 OK", headers={"Set-Cookie": c.output(header='', sep='')})
     client.send(b"Logged in")
@@ -160,9 +161,17 @@ def handle_client(client):
         
         method, path, _ = request_line.split()
         header_dict = {}
+        nickname = "Anonymous"
+        
         for line in header_lines:
             key, value = line.split(":", 1)
             header_dict[key.strip()] = value.strip()
+            
+            # Retrieve nickname from cookies if available
+            if key.strip().lower() == "cookie":
+                c = cookies.SimpleCookie(value.strip())
+                if "nickname" in c:
+                    nickname = c["nickname"].value
 
         if method == 'GET':
             handle_get_request(client, path)

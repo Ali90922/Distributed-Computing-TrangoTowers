@@ -17,12 +17,12 @@
         body {
             display: flex;
             align-items: center;
-            justify-content: flex-start; /* Aligns to the left side */
+            justify-content: flex-start;
             min-height: 100vh;
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            padding-left: 20px; /* Optional padding to adjust left alignment */
+            padding-left: 20px;
         }
 
         /* Center the login and chat containers */
@@ -113,7 +113,7 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             checkLoginStatus();
-            startBackgroundCarousel();  // Start carousel on page load
+            startBackgroundCarousel();
         });
 
         // Background carousel images in the Assets folder
@@ -132,7 +132,7 @@
             setInterval(() => {
                 currentImageIndex = (currentImageIndex + 1) % images.length;
                 document.body.style.backgroundImage = `url('${images[currentImageIndex]}')`;
-            }, 7000); // Change image every 7 seconds
+            }, 7000);
         }
 
         function checkLoginStatus() {
@@ -146,7 +146,7 @@
 
         function login() {
             const nicknameInput = document.getElementById("nicknameInput");
-            const nickname = nicknameInput.value;
+            const nickname = nicknameInput.value.trim();
 
             if (!nickname) {
                 alert("Please enter a nickname.");
@@ -158,6 +158,7 @@
             xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
             xhr.onreadystatechange = function () {
                 if (xhr.readyState == 4 && xhr.status == 200) {
+                    document.cookie = `nickname=${nickname}; path=/; max-age=2592000`; // Fallback: Set nickname cookie on client-side
                     showChat(nickname);
                 } else if (xhr.readyState == 4) {
                     console.error("Error logging in:", xhr.statusText);
@@ -174,7 +175,8 @@
 
         function sendMessage() {
             const messageInput = document.getElementById("messageInput");
-            const message = messageInput.value;
+            const message = messageInput.value.trim();
+            if (!message) return;
 
             const xhr = new XMLHttpRequest();
             xhr.open("POST", "/api/messages", true);
@@ -201,7 +203,7 @@
                 if (xhr.readyState == 4 && xhr.status == 200) {
                     const data = JSON.parse(xhr.responseText);
                     displayMessages(data.messages);
-                    setTimeout(pollMessages, 1000); // Adjust interval as needed
+                    setTimeout(pollMessages, 1000);
                 }
             };
             xhr.send();
@@ -218,9 +220,10 @@
         }
 
         function getCookie(name) {
-            const value = "; " + document.cookie;
-            const parts = value.split("; " + name + "=");
-            if (parts.length === 2) return parts.pop().split(";").shift();
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
         }
     </script>
 </body>
