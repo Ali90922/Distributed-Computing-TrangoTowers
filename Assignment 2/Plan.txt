@@ -21,6 +21,9 @@ The Web interface can be then accessed by going to :
 
 http://localhost:8548/
 
+or if One is running it in Aviary, go to : 
+http://hawk.cs.umanitoba.ca:8548/
+
 
 How to run the ScreenScraper program : 
 First compile the program with make : 
