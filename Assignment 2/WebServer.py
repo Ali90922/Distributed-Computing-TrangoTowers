@@ -20,14 +20,11 @@ def send_response_header(client, status_code, content_type="text/html", headers=
 
 # Handle GET requests
 def handle_get_request(client, path):
-    # If path is root, serve index.html
     if path == '/':
         path = '/index.html'
 
-    # Remove leading slash for file path resolution
     file_path = path.lstrip('/')
     
-    # Check if path starts with /api/, then call the appropriate API handler
     if path.startswith('/api/'):
         if path == '/api/messages':
             handle_get_messages(client)
@@ -35,7 +32,6 @@ def handle_get_request(client, path):
             send_response_header(client, "404 Not Found")
             client.send(b"<h1>API Endpoint Not Found</h1>")
     else:
-        # Serve static files if they exist
         if os.path.isfile(file_path):
             content_type, _ = mimetypes.guess_type(file_path)
             content_type = content_type or "application/octet-stream"
@@ -48,7 +44,6 @@ def handle_get_request(client, path):
                 send_response_header(client, "500 Internal Server Error")
                 client.send(b"<h1>500 Internal Server Error</h1>")
         else:
-            # File not found
             send_response_header(client, "404 Not Found")
             client.send(b"<h1>404 Not Found</h1>")
 
@@ -106,7 +101,6 @@ def handle_post_message(client, headers, body):
         client.send(b"No message content")
         return
 
-    # Retrieve nickname from cookie if available
     nickname = "Anonymous"
     if "Cookie" in headers:
         c = cookies.SimpleCookie(headers["Cookie"])
@@ -167,7 +161,6 @@ def handle_client(client):
             key, value = line.split(":", 1)
             header_dict[key.strip()] = value.strip()
             
-            # Retrieve nickname from cookies if available
             if key.strip().lower() == "cookie":
                 c = cookies.SimpleCookie(value.strip())
                 if "nickname" in c:
@@ -187,14 +180,19 @@ def handle_client(client):
 
 def run_server():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow reuse of the address
         server.bind(('', WEB_SERVER_PORT))
         server.listen(5)
         print(f'Starting server on port {WEB_SERVER_PORT}...')
         
         while True:
-            client, addr = server.accept()
-            print(f"Connection from {addr}")
-            threading.Thread(target=handle_client, args=(client,)).start()
+            try:
+                client, addr = server.accept()
+                print(f"Connection from {addr}")
+                threading.Thread(target=handle_client, args=(client,)).start()
+            except KeyboardInterrupt:
+                print("Shutting down server.")
+                break
 
 if __name__ == '__main__':
     run_server()
