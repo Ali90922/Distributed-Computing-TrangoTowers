@@ -5,14 +5,13 @@ import termios
 import tty
 
 # Check if the correct number of command-line arguments were provided
-# Expecting the user to input the host IP as a command-line argument
 if len(sys.argv) != 2:
     print("Usage: python client.py <HOST_IP>")
     sys.exit()
 
 # Extract the host IP from the command-line argument
 host = sys.argv[1]
-port = 8547  # Hardcoded port number for the server connection
+port = 8547  # Port number for the server connection
 
 # Ask the user to choose a nickname that will be used in the chatroom
 nickname = input("Choose a Nickname: ")
@@ -24,7 +23,6 @@ try:
     client.connect((host, port))
     client.setblocking(False)  # Set the socket to non-blocking mode
 except Exception as e:
-    # If there's any error during connection (e.g., wrong host), exit the program
     print(f"Could not connect to the server: {e}")
     sys.exit()
 
@@ -71,18 +69,16 @@ def run_client():
                         if message == 'NICK':
                             client.send(nickname.encode('ascii'))
                         else:
-                            # Move the cursor to the start of the line, clear it, and display the new message
+                            # Display the incoming message
                             sys.stdout.write(f'\r\033[K{message}\n')  # \033[K clears the line
                             # Re-display the prompt with the current partial message
                             sys.stdout.write(f'{nickname}: {partial_message}')
                             sys.stdout.flush()
                     except socket.error as e:
-                        # Handle socket errors (e.g., connection reset or closed)
                         print(f"\nSocket error: {e}")
                         client.close()
                         sys.exit()  # Exit the program on error
                     except Exception as e:
-                        # Catch any other unexpected errors
                         print(f"\nAn unexpected error occurred: {e}")
                         client.close()
                         sys.exit()  # Exit the program
@@ -94,14 +90,14 @@ def run_client():
                 char = sys.stdin.read(1)
                 if char == '\n':  # If Enter is pressed
                     if partial_message.lower() == "quit":  # Check if the user typed 'quit'
-                        # Inform the server that the user is leaving
                         client.send(f'{nickname} has left the chat.\n'.encode('ascii'))
                         print("\nExiting the chatroom...")
                         client.close()
                         sys.exit()  # Exit the program
 
-                    # Send the message to the server (without the nickname)
-                    client.send(partial_message.encode('ascii'))
+                    # Prepend nickname to the message and send it to the server
+                    message_with_nickname = f"{nickname}: {partial_message}"
+                    client.send(message_with_nickname.encode('ascii'))
                     partial_message = ''  # Reset the partial message
                     sys.stdout.write('\n' + f'{nickname}: ')  # Re-display the prompt
                     sys.stdout.flush()
