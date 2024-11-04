@@ -41,6 +41,7 @@ def broadcast(message, sender_socket=None, include_nickname=True):
     for client_socket in list(clients.keys()):
         if client_socket != sender_socket:
             try:
+                # Send the message without any additional prefix
                 client_socket.send((message_to_send + "\n").encode('ascii'))
             except:
                 client_socket.close()
@@ -48,10 +49,18 @@ def broadcast(message, sender_socket=None, include_nickname=True):
                     sockets_list.remove(client_socket)
                 del clients[client_socket]
 
-    # Save the message in the database
+    # Save the message in the database without altering the format
     cursor.execute('INSERT INTO messages (nickname, message) VALUES (?, ?)', (sender_nickname, message))
     conn.commit()
     print(f"Message saved in database: {sender_nickname}: {message}")
+
+
+
+
+
+
+
+
 
 def load_messages(client_socket):
     """Loads the latest 20 messages and sends them to the client."""

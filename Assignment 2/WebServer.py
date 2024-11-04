@@ -85,6 +85,12 @@ def handle_delete_request(client, path):
         send_response_header(client, "404 Not Found")
         client.send(b"<h1>API Endpoint Not Found</h1>")
 
+
+
+
+
+
+# Retrieve messages from chat server with optional limit
 # Retrieve messages from chat server with optional limit
 def handle_get_messages(client, limit=None):
     try:
@@ -111,6 +117,13 @@ def handle_get_messages(client, limit=None):
         print(f"Error in handle_get_messages: {e}")
         send_response_header(client, "500 Internal Server Error")
         client.send(f"Failed to retrieve messages: {e}".encode())
+
+
+
+
+# problem popping up in the post message function as it is displaying the nick-name sent from the commandline client twice 
+    # have to fix the above problem !!!! ^
+
 
 # Send a new message to the chat server
 def handle_post_message(client, headers, body):
