@@ -87,13 +87,9 @@ def handle_delete_request(client, path):
 
 
 
-
-
-
-
 # problem popping up in the post message function as it is displaying the nick-name sent from the commandline client twice 
     # have to fix the above problem !!!! ^
-
+        # Problem is fixed - problem was with the old Clien.py file logging in the nickname twice - nothing wrong with this file
 
 # Retrieve messages from chat server with optional limit
 def handle_get_messages(client, limit=None):
