@@ -90,7 +90,11 @@ def handle_delete_request(client, path):
 
 
 
-# Retrieve messages from chat server with optional limit
+
+# problem popping up in the post message function as it is displaying the nick-name sent from the commandline client twice 
+    # have to fix the above problem !!!! ^
+
+
 # Retrieve messages from chat server with optional limit
 def handle_get_messages(client, limit=None):
     try:
@@ -111,8 +115,18 @@ def handle_get_messages(client, limit=None):
         if limit:
             message_list = message_list[:limit]
 
+        # Ensure we don't prepend nickname again if it's already included
+        processed_messages = []
+        for message in message_list:
+            if message.count(":") > 1:  # Detect if there is already a nickname in the format
+                # Split the message once to get nickname and content
+                nickname, content = message.split(":", 1)
+                processed_messages.append(f"{nickname.strip()}: {content.strip()}")
+            else:
+                processed_messages.append(message.strip())
+
         send_response_header(client, "200 OK", "application/json")
-        client.send(json.dumps({"messages": message_list}).encode())
+        client.send(json.dumps({"messages": processed_messages}).encode())
     except Exception as e:
         print(f"Error in handle_get_messages: {e}")
         send_response_header(client, "500 Internal Server Error")
@@ -121,8 +135,7 @@ def handle_get_messages(client, limit=None):
 
 
 
-# problem popping up in the post message function as it is displaying the nick-name sent from the commandline client twice 
-    # have to fix the above problem !!!! ^
+
 
 
 # Send a new message to the chat server
@@ -165,6 +178,15 @@ def handle_post_message(client, headers, body):
         send_response_header(client, "500 Internal Server Error")
         client.send(f"Failed to send message: {e}".encode())
 
+
+
+
+
+
+
+
+        
+
 # Set login cookie
 def handle_login(client, body):
     if not body.strip():
@@ -188,10 +210,19 @@ def handle_login(client, body):
     send_response_header(client, "200 OK", headers={"Set-Cookie": c.output(header='', sep='')})
     client.send(b"Logged in")
 
+
+
+
+
+
 # Logout and clear the nickname cookie
 def handle_logout(client):
     send_response_header(client, "200 OK", headers={"Set-Cookie": "nickname=; Max-Age=0"})
     client.send(b"Logged out")
+
+
+
+
 
 # Handle incoming client requests
 def handle_client(client):
@@ -220,6 +251,10 @@ def handle_client(client):
         print(f"Error handling client request: {e}")
     finally:
         client.close()
+
+
+
+
 
 # Start the web server
 def run_server():

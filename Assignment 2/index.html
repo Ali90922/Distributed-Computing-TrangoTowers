@@ -228,14 +228,20 @@
         }
 
         function displayMessages(messages) {
-            const messageDiv = document.getElementById("messages");
-            messageDiv.innerHTML = '';
-            messages.forEach(msg => {
-                const p = document.createElement('p');
-                p.textContent = msg;
-                messageDiv.appendChild(p);
-            });
-        }
+    const messageDiv = document.getElementById("messages");
+    messageDiv.innerHTML = '';
+    messages.forEach(msg => {
+        const p = document.createElement('p');
+        p.textContent = msg; // Display the message directly
+        messageDiv.appendChild(p);
+    });
+}
+
+
+
+
+
+
 
         function logout() {
             const xhr = new XMLHttpRequest();
