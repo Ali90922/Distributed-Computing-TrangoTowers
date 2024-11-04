@@ -94,6 +94,23 @@
         #login, #chat {
             display: none;
         }
+
+        /* Styling for the logout button */
+        #logoutButton {
+            width: 100%;
+            padding: 12px;
+            background-color: #ff4d4d; /* Red color */
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        #logoutButton:hover {
+            background-color: #e60000;
+        }
     </style>
 </head>
 <body>
@@ -108,6 +125,7 @@
         <div id="messages"></div>
         <input type="text" id="messageInput" placeholder="Type your message here" onkeypress="checkEnter(event)">
         <button onclick="sendMessage()">Send</button>
+        <button id="logoutButton" onclick="logout()">Logout</button>
     </div>
 
     <script>
@@ -217,6 +235,22 @@
                 p.textContent = msg;
                 messageDiv.appendChild(p);
             });
+        }
+
+        function logout() {
+            const xhr = new XMLHttpRequest();
+            xhr.open("DELETE", "/api/login", true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    document.cookie = "nickname=; path=/; max-age=0"; // Clear the nickname cookie
+                    document.getElementById("chat").style.display = "none";
+                    document.getElementById("login").style.display = "block";
+                    console.log("Logged out successfully.");
+                } else if (xhr.readyState == 4) {
+                    console.error("Error logging out:", xhr.statusText);
+                }
+            };
+            xhr.send();
         }
 
         function getCookie(name) {

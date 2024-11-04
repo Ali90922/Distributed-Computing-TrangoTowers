@@ -4,6 +4,7 @@ from http import cookies
 import threading
 import os
 import mimetypes
+from urllib.parse import urlparse, parse_qs
 
 CHAT_SERVER_HOST = 'localhost'
 CHAT_SERVER_PORT = 8547
@@ -18,49 +19,74 @@ def send_response_header(client, status_code, content_type="text/html", headers=
             client.send(f"{header}: {value}\r\n".encode())
     client.send("\r\n".encode())
 
-# Handle GET requests
-def handle_get_request(client, path):
-    if path == '/':
-        path = '/index.html'
+# Check if the user is logged in by looking for 'nickname' in cookies
+def is_logged_in(headers):
+    if "Cookie" in headers:
+        c = cookies.SimpleCookie(headers["Cookie"])
+        return "nickname" in c
+    return False
 
-    file_path = path.lstrip('/')
+# Handle GET requests
+def handle_get_request(client, path, headers):
+    url_parts = urlparse(path)
+    path = url_parts.path
+    query_params = parse_qs(url_parts.query)
+    limit = int(query_params.get("limit", [None])[0]) if "limit" in query_params else None
     
-    if path.startswith('/api/'):
-        if path == '/api/messages':
-            handle_get_messages(client)
-        else:
-            send_response_header(client, "404 Not Found")
-            client.send(b"<h1>API Endpoint Not Found</h1>")
+    if path == '/api/messages':
+        if not is_logged_in(headers):
+            send_response_header(client, "403 Forbidden", "application/json")
+            client.send(b'{"error": "Not logged in"}')
+            return
+        handle_get_messages(client, limit)
+    elif path == '/':
+        # Serve index.html if root path
+        path = '/index.html'
+        serve_static_file(client, path.lstrip('/'))
     else:
-        if os.path.isfile(file_path):
-            content_type, _ = mimetypes.guess_type(file_path)
-            content_type = content_type or "application/octet-stream"
-            try:
-                with open(file_path, 'rb') as file:
-                    send_response_header(client, "200 OK", content_type)
-                    client.send(file.read())
-            except Exception as e:
-                print(f"Error serving file {file_path}: {e}")
-                send_response_header(client, "500 Internal Server Error")
-                client.send(b"<h1>500 Internal Server Error</h1>")
-        else:
-            send_response_header(client, "404 Not Found")
-            client.send(b"<h1>404 Not Found</h1>")
+        serve_static_file(client, path.lstrip('/'))
+
+# Serve static files
+def serve_static_file(client, file_path):
+    if os.path.isfile(file_path):
+        content_type, _ = mimetypes.guess_type(file_path)
+        content_type = content_type or "application/octet-stream"
+        try:
+            with open(file_path, 'rb') as file:
+                send_response_header(client, "200 OK", content_type)
+                client.send(file.read())
+        except Exception as e:
+            print(f"Error serving file {file_path}: {e}")
+            send_response_header(client, "500 Internal Server Error")
+            client.send(b"<h1>500 Internal Server Error</h1>")
+    else:
+        send_response_header(client, "404 Not Found")
+        client.send(b"<h1>404 Not Found</h1>")
 
 # Handle POST requests
 def handle_post_request(client, path, headers, body):
     if path == '/api/messages':
+        if not is_logged_in(headers):
+            send_response_header(client, "403 Forbidden", "application/json")
+            client.send(b'{"error": "Not logged in"}')
+            return
         handle_post_message(client, headers, body)
     elif path == '/api/login':
         handle_login(client, body)
-    elif path == '/api/logout':
+    else:
+        send_response_header(client, "404 Not Found")
+        client.send(b"<h1>API Endpoint Not Found</h1>")
+
+# Handle DELETE requests
+def handle_delete_request(client, path):
+    if path == '/api/login':
         handle_logout(client)
     else:
         send_response_header(client, "404 Not Found")
         client.send(b"<h1>API Endpoint Not Found</h1>")
 
-def handle_get_messages(client):
-    """Retrieve messages from chat server."""
+# Retrieve messages from chat server with optional limit
+def handle_get_messages(client, limit=None):
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(5)
@@ -74,15 +100,20 @@ def handle_get_messages(client):
                     break
                 messages += chunk.decode('ascii')
 
+        # Split messages and apply limit if specified
+        message_list = messages.splitlines()
+        if limit:
+            message_list = message_list[:limit]
+
         send_response_header(client, "200 OK", "application/json")
-        client.send(json.dumps({"messages": messages.splitlines()}).encode())
+        client.send(json.dumps({"messages": message_list}).encode())
     except Exception as e:
         print(f"Error in handle_get_messages: {e}")
         send_response_header(client, "500 Internal Server Error")
         client.send(f"Failed to retrieve messages: {e}".encode())
 
+# Send a new message to the chat server
 def handle_post_message(client, headers, body):
-    """Send a new message to the chat server."""
     if not body.strip():
         send_response_header(client, "400 Bad Request")
         client.send(b"Empty request body")
@@ -121,6 +152,7 @@ def handle_post_message(client, headers, body):
         send_response_header(client, "500 Internal Server Error")
         client.send(f"Failed to send message: {e}".encode())
 
+# Set login cookie
 def handle_login(client, body):
     if not body.strip():
         send_response_header(client, "400 Bad Request")
@@ -143,10 +175,12 @@ def handle_login(client, body):
     send_response_header(client, "200 OK", headers={"Set-Cookie": c.output(header='', sep='')})
     client.send(b"Logged in")
 
+# Logout and clear the nickname cookie
 def handle_logout(client):
     send_response_header(client, "200 OK", headers={"Set-Cookie": "nickname=; Max-Age=0"})
     client.send(b"Logged out")
 
+# Handle incoming client requests
 def handle_client(client):
     try:
         request = client.recv(4096).decode()
@@ -155,21 +189,17 @@ def handle_client(client):
         
         method, path, _ = request_line.split()
         header_dict = {}
-        nickname = "Anonymous"
         
         for line in header_lines:
             key, value = line.split(":", 1)
             header_dict[key.strip()] = value.strip()
-            
-            if key.strip().lower() == "cookie":
-                c = cookies.SimpleCookie(value.strip())
-                if "nickname" in c:
-                    nickname = c["nickname"].value
 
         if method == 'GET':
-            handle_get_request(client, path)
+            handle_get_request(client, path, header_dict)
         elif method == 'POST':
             handle_post_request(client, path, header_dict, body)
+        elif method == 'DELETE':
+            handle_delete_request(client, path)
         else:
             send_response_header(client, "405 Method Not Allowed")
             client.send(b"Method Not Allowed")
@@ -178,9 +208,10 @@ def handle_client(client):
     finally:
         client.close()
 
+# Start the web server
 def run_server():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow reuse of the address
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind(('', WEB_SERVER_PORT))
         server.listen(5)
         print(f'Starting server on port {WEB_SERVER_PORT}...')
