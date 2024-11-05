@@ -249,9 +249,6 @@ def handle_client(client):
         client.close()
 
 
-
-
-
 # Start the web server
 def run_server():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:

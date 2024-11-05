@@ -6,6 +6,7 @@ import sys
 host = '0.0.0.0'
 port = 8547
 
+
 # Database connection
 conn = sqlite3.connect('chat.db', check_same_thread=False)
 cursor = conn.cursor()
@@ -63,7 +64,7 @@ def load_messages(client_socket):
         client_socket.send(f"{nickname}: {message}\n".encode('ascii'))
 
 def handle_web_request(notified_socket, message):
-    """Handles web requests for GET_MESSAGES, SEND_MESSAGE, and DELETE_MESSAGE."""
+    """Handles web requests for GET_MESSAGES, SEND_MESSAGE, and DELETE /api/messages/[message-id]."""
     if message == 'GET_MESSAGES':
         cursor.execute('SELECT id, nickname, message FROM messages ORDER BY id DESC LIMIT 20')
         messages = cursor.fetchall()
@@ -88,27 +89,32 @@ def handle_web_request(notified_socket, message):
         else:
             broadcast(msg_content, notified_socket)
             
-    elif message.startswith('DELETE_MESSAGE'):
-        # Extract the message ID and the nickname from the command
-        parts = message.split()
-        if len(parts) >= 3:
-            message_id = parts[1]
-            requester_nickname = parts[2]
+    elif message.startswith('DELETE /api/messages/'):
+        # Extract the message ID from the request
+        try:
+            message_id = int(message.split('/api/messages/')[1].strip())
+        except (IndexError, ValueError):
+            notified_socket.send(b"Invalid DELETE request format\n")
+            return
 
-            # Check if the requester is the owner of the message
-            cursor.execute('SELECT nickname FROM messages WHERE id = ?', (message_id,))
-            result = cursor.fetchone()
-            if result and result[0] == requester_nickname:
+        requester_nickname = nicknames.get(notified_socket)
+
+        # Check if the requester is the owner of the message
+        cursor.execute('SELECT nickname FROM messages WHERE id = ?', (message_id,))
+        result = cursor.fetchone()
+        if result:
+            message_owner = result[0]
+            if message_owner == requester_nickname:
                 # Delete the message
                 cursor.execute('DELETE FROM messages WHERE id = ?', (message_id,))
                 conn.commit()
-                notified_socket.send(b"OK\n")
+                notified_socket.send(b"Message deleted successfully\n")
                 broadcast(f"Message {message_id} deleted by {requester_nickname}", include_nickname=False)
             else:
-                notified_socket.send(b"Unauthorized or message not found\n")
-                
+                notified_socket.send(b"Unauthorized: You can only delete your own messages\n")
         else:
-            notified_socket.send(b"Invalid DELETE_MESSAGE format\n")
+            notified_socket.send(b"Message not found\n")
+
 
 
 def close_all_connections():
