@@ -54,6 +54,7 @@ def broadcast(message, sender_socket=None, include_nickname=True):
     print(f"Message saved in database: {sender_nickname}: {message}")
 
 
+
 def load_messages(client_socket):
     """Loads the latest 20 messages and sends them to the client."""
     cursor.execute('SELECT nickname, message FROM messages ORDER BY id DESC LIMIT 20')
@@ -62,11 +63,11 @@ def load_messages(client_socket):
         client_socket.send(f"{nickname}: {message}\n".encode('ascii'))
 
 def handle_web_request(notified_socket, message):
-    """Handles web requests for GET_MESSAGES and SEND_MESSAGE."""
+    """Handles web requests for GET_MESSAGES, SEND_MESSAGE, and DELETE_MESSAGE."""
     if message == 'GET_MESSAGES':
-        cursor.execute('SELECT nickname, message FROM messages ORDER BY id DESC LIMIT 20')
+        cursor.execute('SELECT id, nickname, message FROM messages ORDER BY id DESC LIMIT 20')
         messages = cursor.fetchall()
-        response = "\n".join([f"{nickname}: {msg}" for nickname, msg in reversed(messages)])
+        response = "\n".join([f"{msg_id} | {nickname}: {msg}" for msg_id, nickname, msg in reversed(messages)])
         
         try:
             notified_socket.sendall(response.encode('ascii'))
@@ -77,6 +78,7 @@ def handle_web_request(notified_socket, message):
         except Exception as e:
             if notified_socket in sockets_list:
                 sockets_list.remove(notified_socket)
+                
     elif message.startswith('SEND_MESSAGE'):
         msg_content = message[len('SEND_MESSAGE '):].strip()
         if ": " in msg_content:
@@ -85,6 +87,29 @@ def handle_web_request(notified_socket, message):
             broadcast(content, notified_socket)
         else:
             broadcast(msg_content, notified_socket)
+            
+    elif message.startswith('DELETE_MESSAGE'):
+        # Extract the message ID and the nickname from the command
+        parts = message.split()
+        if len(parts) >= 3:
+            message_id = parts[1]
+            requester_nickname = parts[2]
+
+            # Check if the requester is the owner of the message
+            cursor.execute('SELECT nickname FROM messages WHERE id = ?', (message_id,))
+            result = cursor.fetchone()
+            if result and result[0] == requester_nickname:
+                # Delete the message
+                cursor.execute('DELETE FROM messages WHERE id = ?', (message_id,))
+                conn.commit()
+                notified_socket.send(b"OK\n")
+                broadcast(f"Message {message_id} deleted by {requester_nickname}", include_nickname=False)
+            else:
+                notified_socket.send(b"Unauthorized or message not found\n")
+                
+        else:
+            notified_socket.send(b"Invalid DELETE_MESSAGE format\n")
+
 
 def close_all_connections():
     """Gracefully close all client connections and the server."""
