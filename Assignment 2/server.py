@@ -54,14 +54,6 @@ def broadcast(message, sender_socket=None, include_nickname=True):
     print(f"Message saved in database: {sender_nickname}: {message}")
 
 
-
-
-
-
-
-
-
-
 def load_messages(client_socket):
     """Loads the latest 20 messages and sends them to the client."""
     cursor.execute('SELECT nickname, message FROM messages ORDER BY id DESC LIMIT 20')
