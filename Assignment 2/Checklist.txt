@@ -1,1 +1,32 @@
 
+
+
+Part 1: 
+
+
+1. Web server is multi-threaded. All threads terminate (successfully or if there is an error).
+
+2. GET /api/messages fetches messages, has query string to limit how many messages are fetched
+
+3. GET/POST /api/messages return appropriate error message when not logged in
+
+4. POST /api/login sets cookie, DELETE removes cookie
+
+5.Web server does not store chat messages, uses chat server that is external (A1 code)
+
+6.Web page is an SPA, does not refresh through log in/log out/new messages/posted message.Frontend hosted from path / (but potentially from other paths, too)
+
+7.Web site updates using polling, shows new messages from server without user interaction
+
+8.Chat server accepts messages from a thin client (A1 client or modified A1 client) New messages sent from any client show up immediately in thin clients.
+
+9. Sharing text from filesystem works. Appropriate HTTP codes used (404 or 200).
+
+10. Sharing images from filesystem works.
+
+
+Part 2:
+
+POST new message (check result code with assert), GET to see that it is there (check error code and message contents with assert). Scraper need not log in (known cookie?). Must be done in C using assert to check
+
+Attempt to get post as user that is not logged in. Verify an appropriate HTTP return code and good error message is provided with assert.
