@@ -4,9 +4,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <netdb.h> // Added to define addrinfo and getaddrinfo
-#include <sys/types.h>
-#include <sys/socket.h>
+#include <netdb.h>
 
 #define BUFFER_SIZE 4096 // Define a constant for the buffer size used in requests and responses
 
