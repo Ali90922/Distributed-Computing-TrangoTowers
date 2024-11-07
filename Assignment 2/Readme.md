@@ -79,6 +79,8 @@ Run the screen scraper with the following syntax:
 ./screen_scraper 127.0.0.1 8000 Ali "Very Sunny Day today!"
 ```
 
+### Running Curl HTTP Commands to test API Routes :
+
 ---
 
 ## Summary of Commands
