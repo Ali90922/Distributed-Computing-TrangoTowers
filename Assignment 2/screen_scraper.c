@@ -6,20 +6,12 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-
-
 #define BUFFER_SIZE 4096 // Define a constant for the buffer size used in requests and responses
-
-
 
 // Function declarations for POST, GET requests, and setting up the connection
 void send_post(int sockfd, const char *host, const char *username, const char *message);
 void send_get(int sockfd, const char *host, const char *username, const char *message);
 void setup_connection(const char *host, const char *port, int *sockfd);
-
-
-
-
 
 int main(int argc, char *argv[])
 {
@@ -61,11 +53,6 @@ int main(int argc, char *argv[])
 
     return EXIT_SUCCESS;
 }
-
-
-
-
-
 
 // Function to set up a connection to the server using the host and port
 void setup_connection(const char *host, const char *port, int *sockfd)
@@ -143,10 +130,6 @@ void send_post(int sockfd, const char *host, const char *username, const char *m
     }
 }
 
-
-
-
-
 // Function to send a GET request to retrieve messages and verify the posted message
 void send_get(int sockfd, const char *host, const char *username, const char *message)
 {
@@ -166,11 +149,6 @@ void send_get(int sockfd, const char *host, const char *username, const char *me
                  "Host: %s\r\n\r\n", host);
     }
 
-    
-    
-    
-    
-    
     // Send the GET request to the server
     send(sockfd, request, strlen(request), 0);
 
