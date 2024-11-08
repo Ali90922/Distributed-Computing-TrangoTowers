@@ -14,11 +14,13 @@ Part 1:
 
 5.Web server does not store chat messages, uses chat server that is external (A1 code)
 
-6.Web page is an SPA, does not refresh through log in/log out/new messages/posted message.Frontend hosted from path / (but potentially from other paths, too)
+6.Web page is an SPA, does not refresh through log in/log out/new messages/posted message.
+Frontend hosted from path / (but potentially from other paths, too)
 
 7.Web site updates using polling, shows new messages from server without user interaction
 
-8.Chat server accepts messages from a thin client (A1 client or modified A1 client) New messages sent from any client show up immediately in thin clients.
+8.Chat server accepts messages from a thin client (A1 client or modified A1 client)
+ New messages sent from any client show up immediately in thin clients.
 
 9. Sharing text from filesystem works. Appropriate HTTP codes used (404 or 200).
 
