@@ -110,7 +110,23 @@ Working as expected ^^^^^
 
 ### Justification on Cookie login Verification with ScreenScraper : 
 
-In the ScreenScraper program, cookie-based authentication is implemented to allow or restrict access based on the presence of a nickname cookie. When a username (nickname) is provided as an argument, it is added to the Cookie header (e.g., Cookie: nickname=Ali) in the POST and GET requests, simulating an authenticated user. The server checks for this cookie to confirm the user is logged in and allows access if it’s present. If no username is provided, the program omits the Cookie header, simulating an unauthenticated request. In this case, the server responds with a 403 Forbidden error, denying access to both posting and retrieving messages. This setup enables the program to test both authenticated and unauthenticated scenarios, verifying proper access control based on the presence of the cookie. 
+# ScreenScraper Program - Cookie-based Authentication Explanation
+
+In this `ScreenScraper` program, cookie-based authentication is implemented in a simplified way to simulate access control based on whether a username is provided. Here’s how it works:
+
+1. **Simulated Cookie Authentication**: The program adds a header `Cookie: nickname=Ali` (or whatever username is provided) to the HTTP requests. This header is meant to simulate a login system where the server would authenticate users based on a "nickname" cookie.
+
+2. **Username as a Simulated Authentication Mechanism**: If a username is provided as an argument, it’s added to the `Cookie` header in both the POST and GET requests, allowing the user to interact with the server. Here, the server checks for the presence of this `nickname` in the cookie and treats it as proof of "authentication." In this setup, any user with a nickname in the cookie is treated as authenticated and allowed to post and retrieve messages.
+
+3. **Unauthenticated Request Simulation**: If no username is provided, the program simply omits the `Cookie` header in the HTTP requests, simulating a request from an unauthenticated user. The server, noticing the absence of the `nickname` cookie, responds with a `403 Forbidden` error to indicate that access is denied due to lack of "authentication."
+
+4. **No Real Cookie Authentication**: This setup does not involve real authentication tokens, passwords, or session management, and there is no actual login process. Instead, it relies on the presence of the `nickname` as a simplistic check to simulate whether a user has access. In practice, anyone who includes a nickname (username) in their request can post to the server, which effectively bypasses true authentication. 
+
+This setup is useful for testing access control logic by simply checking for the presence or absence of the nickname, allowing the program to validate scenarios where:
+   - **Authenticated access** is simulated by including a `nickname` in the cookie, letting the user post or retrieve messages.
+   - **Unauthenticated access** is simulated by omitting the `nickname`, leading to a `403 Forbidden` response, testing how the server handles unauthorized requests.
+
+This approach helps verify that the server properly restricts access based on the presence of a nickname, even if it doesn’t enforce real user identity verification.
 
 
 
