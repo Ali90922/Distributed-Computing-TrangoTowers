@@ -117,6 +117,7 @@ In the ScreenScraper program, cookie-based authentication is implemented to allo
 ### Refrences - W3 Schools
 
 "I used W3Schools’ HTML guide to build the frontend for Discordn't, utilizing their resources for layout, styling, and responsive design.
+https://www.w3schools.com/html/
 
 ---
 
