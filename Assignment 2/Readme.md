@@ -137,3 +137,9 @@ make
 # Screen Scraper Execution Example
 ./screen_scraper 127.0.0.1 8000 Ali "Very Sunny Day today!"
 ```
+#Screen Scraper Execution Example -- UnVerified User - with no cookie
+./screen_scraper 130.179.28.113 8548 "Juvee"
+```
+
+
+
