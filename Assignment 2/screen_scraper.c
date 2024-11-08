@@ -12,6 +12,7 @@
 void send_post(int sockfd, const char *host, const char *username, const char *message);
 void send_get(int sockfd, const char *host, const char *username, const char *message);
 void setup_connection(const char *host, const char *port, int *sockfd);
+void assert_response_code(const char *response, const char *expected_code);
 
 int main(int argc, char *argv[])
 {
@@ -28,21 +29,33 @@ int main(int argc, char *argv[])
     const char *message = argv[4];  // Message to post
     int sockfd;
 
-    // Establish a connection to the server
+    // Step 1: Initial GET to ensure message isn’t already present
     setup_connection(host, port, &sockfd);
-
-    // Send a POST request with the message
-    send_post(sockfd, host, username, message);
-
-    // Close the current connection and reopen a new one to send a GET request
-    close(sockfd);
-    setup_connection(host, port, &sockfd);
-
-    // Send a GET request to retrieve the message and check that it is present
     send_get(sockfd, host, username, message);
-
-    // Close the connection after the GET request
     close(sockfd);
+
+    // Step 2: POST a new message
+    setup_connection(host, port, &sockfd);
+    send_post(sockfd, host, username, message);
+    close(sockfd);
+
+    // Step 3: Confirm message is present with a second GET
+    setup_connection(host, port, &sockfd);
+    send_get(sockfd, host, username, message);
+    close(sockfd);
+
+    // Step 4: Attempt GET without cookie to simulate unauthenticated access
+    setup_connection(host, port, &sockfd);
+    printf("\nTesting GET without cookie:\n");
+    send_get(sockfd, host, NULL, message);
+    close(sockfd);
+
+    // Step 5: Attempt POST without cookie to simulate unauthenticated access
+    setup_connection(host, port, &sockfd);
+    printf("\nTesting POST without cookie:\n");
+    send_post(sockfd, host, NULL, message);
+    close(sockfd);
+
     return EXIT_SUCCESS;
 }
 
@@ -85,22 +98,40 @@ void send_post(int sockfd, const char *host, const char *username, const char *m
     char request[BUFFER_SIZE];
 
     // Construct the HTTP POST request
-    snprintf(request, sizeof(request),
-             "POST /api/messages HTTP/1.1\r\n"
-             "Host: %s\r\n"
-             "Content-Type: application/json\r\n"
-             "Cookie: nickname=%s\r\n"     // Include the username as a cookie
-             "Content-Length: %zu\r\n\r\n" // Specify the content length
-             "{\"message\": \"%s\"}",      // JSON body with the message content
-             host, username, strlen(message) + 13, message);
+    if (username) {
+        snprintf(request, sizeof(request),
+                 "POST /api/messages HTTP/1.1\r\n"
+                 "Host: %s\r\n"
+                 "Content-Type: application/json\r\n"
+                 "Cookie: nickname=%s\r\n"     // Include the username as a cookie
+                 "Content-Length: %zu\r\n\r\n" // Specify the content length
+                 "{\"message\": \"%s\"}",      // JSON body with the message content
+                 host, username, strlen(message) + 13, message);
+    } else {
+        snprintf(request, sizeof(request),
+                 "POST /api/messages HTTP/1.1\r\n"
+                 "Host: %s\r\n"
+                 "Content-Type: application/json\r\n"
+                 "Content-Length: %zu\r\n\r\n" // No cookie header for unauthenticated test
+                 "{\"message\": \"%s\"}",
+                 host, strlen(message) + 13, message);
+    }
 
     // Send the POST request to the server
     send(sockfd, request, strlen(request), 0);
 
     // Receive the response from the server
     char response[BUFFER_SIZE];
-    recv(sockfd, response, sizeof(response) - 1, 0);
+    int len = recv(sockfd, response, sizeof(response) - 1, 0);
+    response[len] = '\0';
     printf("POST response:\n%s\n", response); // Print the server's response
+
+    // Assert that the response contains the correct status code
+    if (username) {
+        assert_response_code(response, "201 Created");
+    } else {
+        assert_response_code(response, "403 Forbidden"); // Check unauthenticated response
+    }
 }
 
 // Function to send a GET request to retrieve messages and verify the posted message
@@ -109,20 +140,40 @@ void send_get(int sockfd, const char *host, const char *username, const char *me
     char request[BUFFER_SIZE];
 
     // Construct the HTTP GET request
-    snprintf(request, sizeof(request),
-             "GET /api/messages HTTP/1.1\r\n"
-             "Host: %s\r\n"
-             "Cookie: nickname=%s\r\n\r\n", // Include the username as a cookie
-             host, username);
+    if (username) {
+        snprintf(request, sizeof(request),
+                 "GET /api/messages HTTP/1.1\r\n"
+                 "Host: %s\r\n"
+                 "Cookie: nickname=%s\r\n\r\n", // Include the username as a cookie
+                 host, username);
+    } else {
+        snprintf(request, sizeof(request),
+                 "GET /api/messages HTTP/1.1\r\n"
+                 "Host: %s\r\n\r\n", host); // No cookie header for unauthenticated test
+    }
 
     // Send the GET request to the server
     send(sockfd, request, strlen(request), 0);
 
     // Receive the response from the server
     char response[BUFFER_SIZE];
-    recv(sockfd, response, sizeof(response) - 1, 0);
+    int len = recv(sockfd, response, sizeof(response) - 1, 0);
+    response[len] = '\0';
     printf("GET response:\n%s\n", response); // Print the server's response
 
-    // Use assert to verify that the message is in the response
-    assert(strstr(response, message) != NULL); // Ensure the posted message is present
+    // Assert that the response contains the correct status code
+    if (username) {
+        assert_response_code(response, "200 OK");
+        assert(strstr(response, message) != NULL); // Check that the message is present
+    } else {
+        assert_response_code(response, "403 Forbidden"); // Check unauthenticated response
+    }
+}
+
+// Helper function to check if the response contains the expected HTTP status code
+void assert_response_code(const char *response, const char *expected_code)
+{
+    char expected_response[BUFFER_SIZE];
+    snprintf(expected_response, sizeof(expected_response), "HTTP/1.1 %s", expected_code);
+    assert(strstr(response, expected_response) != NULL);
 }
