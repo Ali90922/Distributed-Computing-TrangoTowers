@@ -16,40 +16,40 @@ void setup_connection(const char *host, const char *port, int *sockfd);
 int main(int argc, char *argv[])
 {
     // Check for correct number of command-line arguments
-    if (argc != 5)
+    if (argc < 4 || argc > 5)
     {
-        fprintf(stderr, "Usage: %s [host] [port] [username] [message]\n", argv[0]);
+        fprintf(stderr, "Usage: %s [host] [port] [message] [optional: username]\n", argv[0]);
         return EXIT_FAILURE; // Exit if incorrect arguments are provided
     }
 
-    const char *host = argv[1];     // Host address
-    const char *port = argv[2];     // Port number
-    const char *username = argv[3]; // Username to use as a cookie value
-    const char *message = argv[4];  // Message to post
+    const char *host = argv[1];       // Host address
+    const char *port = argv[2];       // Port number
+    const char *message = argv[3];    // Message to post
+    const char *username = (argc == 5) ? argv[4] : NULL; // Optional username for authentication
     int sockfd;
 
-    // Step 1: POST a message with a username
-    setup_connection(host, port, &sockfd);
-    send_post(sockfd, host, username, message);
-    close(sockfd);
+    if (username) {
+        // Authenticated Test: POST and GET with username
+        setup_connection(host, port, &sockfd);
+        send_post(sockfd, host, username, message);
+        close(sockfd);
 
-    // Step 2: Wait to allow the server to process the message
-    sleep(1); // Wait 1 second
+        // Wait for the server to process the message
+        sleep(1);
 
-    // Step 3: GET to verify the message is present
-    setup_connection(host, port, &sockfd);
-    send_get(sockfd, host, username, message);
-    close(sockfd);
+        setup_connection(host, port, &sockfd);
+        send_get(sockfd, host, username, message);
+        close(sockfd);
+    } else {
+        // Unauthenticated Test: POST and GET without username (expect 403 Forbidden)
+        setup_connection(host, port, &sockfd);
+        send_post(sockfd, host, NULL, message);
+        close(sockfd);
 
-    // Step 4: Test POST without a username (should be forbidden)
-    setup_connection(host, port, &sockfd);
-    send_post(sockfd, host, NULL, message);
-    close(sockfd);
-
-    // Step 5: Test GET without a username (should be forbidden)
-    setup_connection(host, port, &sockfd);
-    send_get(sockfd, host, NULL, message);
-    close(sockfd);
+        setup_connection(host, port, &sockfd);
+        send_get(sockfd, host, NULL, message);
+        close(sockfd);
+    }
 
     return EXIT_SUCCESS;
 }
@@ -122,11 +122,11 @@ void send_post(int sockfd, const char *host, const char *username, const char *m
     response[len] = '\0';
     printf("POST response:\n%s\n", response); // Print the server's response
 
-    // If no username, expect 403 Forbidden
-    if (!username) {
-        assert(strstr(response, "403 Forbidden") != NULL); // Ensure forbidden access
-    } else {
+    // Assert based on authentication
+    if (username) {
         assert(strstr(response, "201 Created") != NULL); // Ensure message was created
+    } else {
+        assert(strstr(response, "403 Forbidden") != NULL); // Ensure forbidden access
     }
 }
 
@@ -158,7 +158,7 @@ void send_get(int sockfd, const char *host, const char *username, const char *me
     response[len] = '\0';
     printf("GET response:\n%s\n", response); // Print the full GET response for debugging
 
-    // Use assert to verify that the message is in the response
+    // Assert based on authentication
     if (username) {
         assert(strstr(response, message) != NULL); // Ensure the posted message is present
     } else {
