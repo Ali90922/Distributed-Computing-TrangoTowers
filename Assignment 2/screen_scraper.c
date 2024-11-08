@@ -9,25 +9,16 @@
 
 // Function declarations for POST, GET requests, and setting up the connection
 void send_post(int sockfd, const char *host, const char *username, const char *message);
-void send_get(int sockfd, const char *host, const char *username);
-
+void send_get(int sockfd, const char *host, const char *username, const char *message);
 void setup_connection(const char *host, const char *port, int *sockfd);
 
 int main(int argc, char *argv[])
 {
-    // Check for the correct number of command-line arguments
-    if (argc < 5)
+    // Check for correct number of command-line arguments
+    if (argc != 5)
     {
-        // If username is missing, simulate a 403 Forbidden response
-        if (argc == 4)
-        {
-            printf("403 Forbidden: Username is required for posting and retrieving messages.\n");
-        }
-        else
-        {
-            fprintf(stderr, "Usage: %s [host] [port] [username] [message]\n", argv[0]);
-        }
-        return EXIT_FAILURE;
+        fprintf(stderr, "Usage: %s [host] [port] [username] [message]\n", argv[0]);
+        return EXIT_FAILURE; // Exit if incorrect arguments are provided
     }
 
     const char *host = argv[1];     // Host address
@@ -35,6 +26,12 @@ int main(int argc, char *argv[])
     const char *username = argv[3]; // Username to use as a cookie value
     const char *message = argv[4];  // Message to post
     int sockfd;
+
+    // If username is missing, simulate a 403 Forbidden response
+    if (strlen(username) == 0) {
+        printf("403 Forbidden: Username is required for posting and retrieving messages.\n");
+        return EXIT_FAILURE; // Exit if username is missing
+    }
 
     // Step 1: POST a message with a username (normal case)
     setup_connection(host, port, &sockfd);
@@ -46,7 +43,7 @@ int main(int argc, char *argv[])
 
     // Step 3: GET to verify the message is present (normal case)
     setup_connection(host, port, &sockfd);
-    send_get(sockfd, host, username);
+    send_get(sockfd, host, username, message);
     close(sockfd);
 
     return EXIT_SUCCESS;
@@ -111,8 +108,8 @@ void send_post(int sockfd, const char *host, const char *username, const char *m
     printf("POST response:\n%s\n", response); // Print the server's response
 }
 
-// Function to send a GET request to retrieve messages
-void send_get(int sockfd, const char *host, const char *username)
+// Function to send a GET request to retrieve messages and verify the posted message
+void send_get(int sockfd, const char *host, const char *username, const char *message)
 {
     char request[BUFFER_SIZE];
 
