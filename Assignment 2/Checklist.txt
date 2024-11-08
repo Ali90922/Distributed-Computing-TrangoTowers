@@ -30,5 +30,7 @@ Frontend hosted from path / (but potentially from other paths, too)
 Part 2:
 
 POST new message (check result code with assert), GET to see that it is there (check error code and message contents with assert). Scraper need not log in (known cookie?). Must be done in C using assert to check
+-- YES 
 
 Attempt to get post as user that is not logged in. Verify an appropriate HTTP return code and good error message is provided with assert.
+-- YES
