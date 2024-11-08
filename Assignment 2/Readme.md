@@ -81,6 +81,13 @@ Run the screen scraper with the following syntax:
 
 ### Running Curl HTTP Commands to test API Routes :
 
+
+2. GET /api/messages fetches messages, has query string to limit how many messages are fetched
+
+3. GET/POST /api/messages return appropriate error message when not logged in
+
+4. POST /api/login sets cookie, DELETE removes cookie
+
 ---
 
 ## Summary of Commands
