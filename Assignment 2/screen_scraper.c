@@ -130,3 +130,4 @@ void send_get(int sockfd, const char *host, const char *username, const char *me
 
     printf("GET response:\n%s\n", response); // Print the full GET response for debugging
 }
+
