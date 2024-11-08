@@ -132,8 +132,9 @@ This approach helps verify that the server properly restricts access based on th
 
 ### Refrences - W3 Schools
 
-"I used W3Schools’ HTML guide to build the frontend for Discordn't, utilizing their resources for layout, styling, and responsive design.
+"I used W3Schools’ HTML guide to build the frontend for Discordn't, utilizing their resources for layout, styling, and responsive design. 
 https://www.w3schools.com/html/
+All images used in the carousel are original, and my work. 
 
 ---
 
