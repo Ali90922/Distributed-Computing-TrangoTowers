@@ -33,17 +33,20 @@ int main(int argc, char *argv[])
     send_post(sockfd, host, username, message);
     close(sockfd);
 
-    // Step 2: GET to verify the message is present
+    // Step 2: Wait to allow the server to process the message
+    sleep(1); // Wait 1 second
+
+    // Step 3: GET to verify the message is present
     setup_connection(host, port, &sockfd);
     send_get(sockfd, host, username, message);
     close(sockfd);
 
-    // Step 3: Test POST without a username (should be forbidden)
+    // Step 4: Test POST without a username (should be forbidden)
     setup_connection(host, port, &sockfd);
     send_post(sockfd, host, NULL, message);
     close(sockfd);
 
-    // Step 4: Test GET without a username (should be forbidden)
+    // Step 5: Test GET without a username (should be forbidden)
     setup_connection(host, port, &sockfd);
     send_get(sockfd, host, NULL, message);
     close(sockfd);
@@ -122,6 +125,8 @@ void send_post(int sockfd, const char *host, const char *username, const char *m
     // If no username, expect 403 Forbidden
     if (!username) {
         assert(strstr(response, "403 Forbidden") != NULL); // Ensure forbidden access
+    } else {
+        assert(strstr(response, "201 Created") != NULL); // Ensure message was created
     }
 }
 
@@ -130,6 +135,7 @@ void send_get(int sockfd, const char *host, const char *username, const char *me
 {
     char request[BUFFER_SIZE];
 
+    // Construct the HTTP GET request
     if (username) {
         snprintf(request, sizeof(request),
                  "GET /api/messages HTTP/1.1\r\n"
@@ -137,6 +143,7 @@ void send_get(int sockfd, const char *host, const char *username, const char *me
                  "Cookie: nickname=%s\r\n\r\n", // Include the username as a cookie
                  host, username);
     } else {
+        // No cookie header if username is NULL (simulate not logged in)
         snprintf(request, sizeof(request),
                  "GET /api/messages HTTP/1.1\r\n"
                  "Host: %s\r\n\r\n", host);
@@ -150,24 +157,6 @@ void send_get(int sockfd, const char *host, const char *username, const char *me
     int len = recv(sockfd, response, sizeof(response) - 1, 0);
     response[len] = '\0';
     printf("GET response:\n%s\n", response); // Print the full GET response for debugging
-
-    // Adjust the assertion to look for a substring if the message might have metadata
-    if (username) {
-        assert(strstr(response, message) != NULL); // Ensure the posted message is present
-    } else {
-        assert(strstr(response, "403 Forbidden") != NULL); // Expect forbidden access without username
-    }
-}
-
-
-    // Send the GET request to the server
-    send(sockfd, request, strlen(request), 0);
-
-    // Receive the response from the server
-    char response[BUFFER_SIZE];
-    int len = recv(sockfd, response, sizeof(response) - 1, 0);
-    response[len] = '\0';
-    printf("GET response:\n%s\n", response); // Print the server's response
 
     // Use assert to verify that the message is in the response
     if (username) {
