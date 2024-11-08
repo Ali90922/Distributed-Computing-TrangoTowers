@@ -16,19 +16,19 @@ void setup_connection(const char *host, const char *port, int *sockfd);
 int main(int argc, char *argv[])
 {
     // Check for correct number of command-line arguments
-    if (argc != 5)
+    if (argc < 4 || argc > 5)
     {
-        fprintf(stderr, "Usage: %s [host] [port] [username] [message]\n", argv[0]);
+        fprintf(stderr, "Usage: %s [host] [port] [message] [optional: username]\n", argv[0]);
         return EXIT_FAILURE; // Exit if incorrect arguments are provided
     }
 
-    const char *host = argv[1];     // Host address
-    const char *port = argv[2];     // Port number
-    const char *username = argv[3]; // Username to use as a cookie value
-    const char *message = argv[4];  // Message to post
+    const char *host = argv[1];               // Host address
+    const char *port = argv[2];               // Port number
+    const char *message = argv[3];            // Message to post
+    const char *username = (argc == 5) ? argv[4] : NULL; // Optional username for authentication
     int sockfd;
 
-    // Step 1: POST a message with a username
+    // Step 1: POST a message (authenticated if username provided)
     setup_connection(host, port, &sockfd);
     send_post(sockfd, host, username, message);
     close(sockfd);
@@ -36,19 +36,9 @@ int main(int argc, char *argv[])
     // Step 2: Wait to allow the server to process the message
     sleep(1); // Wait 1 second
 
-    // Step 3: GET to verify the message is present
+    // Step 3: GET to verify the message (authenticated if username provided)
     setup_connection(host, port, &sockfd);
     send_get(sockfd, host, username, message);
-    close(sockfd);
-
-    // Step 4: Test POST without a username (should be forbidden)
-    setup_connection(host, port, &sockfd);
-    send_post(sockfd, host, NULL, message);
-    close(sockfd);
-
-    // Step 5: Test GET without a username (should be forbidden)
-    setup_connection(host, port, &sockfd);
-    send_get(sockfd, host, NULL, message);
     close(sockfd);
 
     return EXIT_SUCCESS;
