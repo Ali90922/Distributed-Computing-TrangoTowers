@@ -84,9 +84,28 @@ Run the screen scraper with the following syntax:
 
 2. GET /api/messages fetches messages, has query string to limit how many messages are fetched
 
-3. GET/POST /api/messages return appropriate error message when not logged in
+4. GET/POST /api/messages return appropriate error message when not logged in
 
-4. POST /api/login sets cookie, DELETE removes cookie
+5. POST /api/login sets cookie, DELETE removes cookie
+
+   For a user that's not logged in :
+   curl -X GET "http://130.179.28.113:8548/api/messages"
+   [nawaza1@eagle Assignment 2]> curl -X GET "http://130.179.28.113:8548/api/messages"
+{"error": "Not logged in"}[nawaza1@eagle Assignment 2]>
+
+Logging in and sending messages
+
+[nawaza1@eagle Assignment 2]> curl -X POST "http://130.179.28.113:8548/api/login" -d '{"username": "your_username", "password": "your_password"}' -c cookies.txt -H "Content-Type: application/json"
+[nawaza1@eagle Assignment 2]> curl -X GET "http://130.179.28.113:8548/api/messages" -b cookies.txt
+{"messages": ["NICK", "614 | Mirha: Hi", "615 | Mirha: this is Mirha", "616 | Mirha: what is up ?", "617 | Mirha: yeah looks good", "618 | Ali: Very Sunny Day today", "619 | Mirha: Hi - this is Mirha", "620 | Mirha: and looks like it's working perfectly fine on Aviary", "621 | Mirha: yeah good stuff", "622 | Mirha: brilliant", "623 | Mirha: need to test the ScreenScraper program now  !", "624 | Jihan: Hope this works on Aviary", "625 | Jihan: Hope this works on Aviary - I just updated the makefile", "626 | Mirha: good stuff G", "627 | Max: hi", "628 | Max: hello", "629 | Max: what is up", "630 | Max: Hiiii", "631 | Max: this is Max", "632 | Jihan: Good day to u Ali", "633 | Jihan: Good day to u Ali"]}[nawaza1@eagle Assignment 2]> 
+
+
+
+[nawaza1@eagle Assignment 2]> curl -X GET "http://130.179.28.113:8548/api/messages" -b cookies.txt
+{"messages": ["NICK", "614 | Mirha: Hi", "615 | Mirha: this is Mirha", "616 | Mirha: what is up ?", "617 | Mirha: yeah looks good", "618 | Ali: Very Sunny Day today", "619 | Mirha: Hi - this is Mirha", "620 | Mirha: and looks like it's working perfectly fine on Aviary", "621 | Mirha: yeah good stuff", "622 | Mirha: brilliant", "623 | Mirha: need to test the ScreenScraper program now  !", "624 | Jihan: Hope this works on Aviary", "625 | Jihan: Hope this works on Aviary - I just updated the makefile", "626 | Mirha: good stuff G", "627 | Max: hi", "628 | Max: hello", "629 | Max: what is up", "630 | Max: Hiiii", "631 | Max: this is Max", "632 | Jihan: Good day to u Ali", "633 | Jihan: Good day to u Ali"]}[nawaza1@eagle Assignment 2]> curl -X POST "http://130.179.28.113:8548/api/messages" -d '{"message": "Your message here"}' -H "Content-Type: application/json" -b cookies.txt
+Message sent[nawaza1@eagle Assignment 2]> 
+
+Working as expected ^^^^^
 
 ---
 
