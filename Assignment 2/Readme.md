@@ -107,6 +107,12 @@ Message sent[nawaza1@eagle Assignment 2]>
 
 Working as expected ^^^^^
 
+
+### Justification on Cookie login Verification with ScreenScraper : 
+
+In the ScreenScraper program, cookie-based authentication is implemented to allow or restrict access based on the presence of a nickname cookie. When a username (nickname) is provided as an argument, it is added to the Cookie header (e.g., Cookie: nickname=Ali) in the POST and GET requests, simulating an authenticated user. The server checks for this cookie to confirm the user is logged in and allows access if it’s present. If no username is provided, the program omits the Cookie header, simulating an unauthenticated request. In this case, the server responds with a 403 Forbidden error, denying access to both posting and retrieving messages. This setup enables the program to test both authenticated and unauthenticated scenarios, verifying proper access control based on the presence of the cookie. 
+
+
 ---
 
 ## Summary of Commands
