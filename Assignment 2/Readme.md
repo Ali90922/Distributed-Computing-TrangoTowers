@@ -59,6 +59,11 @@ Replace `127.0.0.1` with the appropriate IP if running on a different machine.
 
 ### Step 1: Compile the Program
 
+Clear out any build builds first by running :
+```bash
+make clean
+```
+
 In the project directory, compile with:
 
 ```bash
