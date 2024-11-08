@@ -9,7 +9,7 @@
 
 // Function declarations for POST, GET requests, and setting up the connection
 void send_post(int sockfd, const char *host, const char *username, const char *message);
-void send_get(int sockfd, const char *host, const char *username, const char *message);
+void send_get(int sockfd, const char *host, const char *username);
 void setup_connection(const char *host, const char *port, int *sockfd);
 
 int main(int argc, char *argv[])
@@ -17,8 +17,8 @@ int main(int argc, char *argv[])
     // Check for correct number of command-line arguments
     if (argc != 5)
     {
-        fprintf(stderr, "Usage: %s [host] [port] [username] [message]\n", argv[0]);
-        return EXIT_FAILURE; // Exit if incorrect arguments are provided
+        fprintf(stderr, "403 Forbidden: Username is required to post or retrieve messages.\n");
+        return EXIT_FAILURE; // Exit if username is missing
     }
 
     const char *host = argv[1];     // Host address
@@ -28,7 +28,8 @@ int main(int argc, char *argv[])
     int sockfd;
 
     // If username is missing, simulate a 403 Forbidden response
-    if (strlen(username) == 0) {
+    if (strlen(username) == 0)
+    {
         printf("403 Forbidden: Username is required for posting and retrieving messages.\n");
         return EXIT_FAILURE; // Exit if username is missing
     }
@@ -43,7 +44,7 @@ int main(int argc, char *argv[])
 
     // Step 3: GET to verify the message is present (normal case)
     setup_connection(host, port, &sockfd);
-    send_get(sockfd, host, username, message);
+    send_get(sockfd, host, username);
     close(sockfd);
 
     return EXIT_SUCCESS;
@@ -109,7 +110,7 @@ void send_post(int sockfd, const char *host, const char *username, const char *m
 }
 
 // Function to send a GET request to retrieve messages and verify the posted message
-void send_get(int sockfd, const char *host, const char *username, const char *message)
+void send_get(int sockfd, const char *host, const char *username)
 {
     char request[BUFFER_SIZE];
 
@@ -130,4 +131,3 @@ void send_get(int sockfd, const char *host, const char *username, const char *me
 
     printf("GET response:\n%s\n", response); // Print the full GET response for debugging
 }
-
