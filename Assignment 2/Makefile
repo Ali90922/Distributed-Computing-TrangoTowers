@@ -15,3 +15,4 @@ $(TARGET): screen_scraper.c
 
 clean:
 	rm -f $(TARGET)
+
