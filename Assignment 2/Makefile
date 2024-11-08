@@ -11,7 +11,7 @@ endif
 all: $(TARGET)
 
 $(TARGET): screen_scraper.c
-    $(CC) $(CFLAGS) -o $(TARGET) screen_scraper.c
+	$(CC) $(CFLAGS) -o $(TARGET) screen_scraper.c
 
 clean:
-    rm -f $(TARGET)
+	rm -f $(TARGET)
