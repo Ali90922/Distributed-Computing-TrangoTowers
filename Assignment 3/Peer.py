@@ -4,7 +4,7 @@ import sys
 import time
 import threading
 import uuid
-from blockchain import Blockchain
+from Blockchain import Blockchain
 from message_handler import handle_message
 
 
