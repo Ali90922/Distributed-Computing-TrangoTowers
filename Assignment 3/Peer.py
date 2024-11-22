@@ -1,167 +1,181 @@
-import socket
 import json
+import socket
 import time
 import uuid
-
+import hashlib
 
 class Peer:
-    def __init__(self, host, port, name="Ali Verstappen"):
+    def __init__(self, host, port, name):
         self.host = host
         self.port = port
         self.name = name
-        self.peers = set()  # Known peers
-        self.blockchain = []  # Local blockchain
+        self.peers = set()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
-        self.sock.settimeout(5)  # Set timeout for receiving messages
+        self.sock.settimeout(5)
+        self.blockchain = []
+
+    def send_message(self, message, peer):
+        try:
+            self.sock.sendto(json.dumps(message).encode(), peer)
+        except Exception as e:
+            print(f"Failed to send message to {peer}: {e}")
+
+    def receive_message(self):
+        try:
+            message, addr = self.sock.recvfrom(1024)
+            return json.loads(message.decode()), addr
+        except socket.timeout:
+            return None, None
+        except Exception as e:
+            print(f"Error receiving message: {e}")
+            return None, None
+
+    def handle_gossip(self, data, addr):
+        self.peers.add((data['host'], data['port']))
+        self.send_message({
+            "type": "GOSSIP_REPLY",
+            "host": self.host,
+            "port": self.port,
+            "name": self.name
+        }, (data['host'], data['port']))
+
+    def handle_stats(self, addr):
+        if not self.blockchain:
+            height = 0
+            hash_val = None
+        else:
+            height = len(self.blockchain) - 1
+            hash_val = self.blockchain[-1]['hash']
+        self.send_message({
+            "type": "STATS_REPLY",
+            "height": height,
+            "hash": hash_val
+        }, addr)
+
+    def handle_get_block(self, data, addr):
+        height = data.get('height')
+        if height is not None and 0 <= height < len(self.blockchain):
+            block = self.blockchain[height]
+            self.send_message({
+                "type": "GET_BLOCK_REPLY",
+                **block
+            }, addr)
+        else:
+            self.send_message({
+                "type": "GET_BLOCK_REPLY",
+                "height": None,
+                "messages": None,
+                "nonce": None,
+                "minedBy": None
+            }, addr)
+
+    def perform_consensus(self):
+        print("Performing consensus...")
+        stats_responses = {}
+
+        for peer in self.peers:
+            self.send_message({"type": "STATS"}, peer)
+
+        start_time = time.time()
+        while time.time() - start_time < 10:
+            message, addr = self.receive_message()
+            if message and message['type'] == "STATS_REPLY":
+                stats_responses[addr] = message
+
+        if not stats_responses:
+            print("No STATS responses received. Cannot perform consensus.")
+            return None
+
+        chain_stats = {}
+        for response in stats_responses.values():
+            key = (response['height'], response['hash'])
+            chain_stats[key] = chain_stats.get(key, 0) + 1
+
+        best_chain = max(chain_stats, key=chain_stats.get)
+        print(f"Consensus determined chain: Height={best_chain[0]}, Hash={best_chain[1]}")
+        return best_chain
+
+    def fetch_block(self, height):
+        for peer in self.peers:
+            self.send_message({"type": "GET_BLOCK", "height": height}, peer)
+            start_time = time.time()
+            while time.time() - start_time < 5:
+                message, addr = self.receive_message()
+                if message and message['type'] == "GET_BLOCK_REPLY" and message['height'] == height:
+                    print(f"Fetched block {height} from {addr}")
+                    return message
+        return None
+
+    def fetch_blockchain(self, chain_height):
+        print("Fetching blockchain...")
+        blockchain = []
+        for height in range(chain_height + 1):
+            block = self.fetch_block(height)
+            if block:
+                blockchain.append(block)
+            else:
+                print(f"Failed to fetch block at height {height}")
+                return None
+        print("Successfully fetched the blockchain")
+        return blockchain
+
+    def validate_blockchain(self, blockchain):
+        for i, block in enumerate(blockchain):
+            if i == 0:
+                continue
+            calculated_hash = self.calculate_block_hash(block)
+            if calculated_hash != block['hash']:
+                print(f"Invalid hash for block {i}")
+                return False
+            if block['hash'] != blockchain[i - 1]['hash']:
+                print(f"Invalid previous hash for block {i}")
+                return False
+        print("Blockchain is valid.")
+        return True
+
+    def calculate_block_hash(self, block):
+        hashBase = hashlib.sha256()
+        hashBase.update(block['previous_hash'].encode())
+        hashBase.update(block['minedBy'].encode())
+        for message in block['messages']:
+            hashBase.update(message.encode())
+        hashBase.update(block['timestamp'].to_bytes(8, 'big'))
+        hashBase.update(block['nonce'].encode())
+        return hashBase.hexdigest()
 
     def run(self):
         print(f"Peer running at {self.host}:{self.port} with name '{self.name}'")
-        self.gossip()
-        self.perform_consensus()
-        while True:
-            try:
-                data, sender = self.sock.recvfrom(1024)
-                message = json.loads(data)
-                self.handle_message(message, sender)
-            except socket.timeout:
-                print("Error receiving message: timed out")
-            except Exception as e:
-                print(f"Error receiving message: {e}")
-
-    def gossip(self):
-        message = {
+        self.send_message({
             "type": "GOSSIP",
             "host": self.host,
             "port": self.port,
             "id": str(uuid.uuid4()),
-            "name": self.name,
-        }
-        for peer in self.peers:
-            try:
-                self.sock.sendto(json.dumps(message).encode(), peer)
-                print(f"GOSSIP sent to {peer}")
-            except Exception as e:
-                print(f"Failed to send GOSSIP to {peer}: {e}")
+            "name": self.name
+        }, ("eagle.cs.umanitoba.ca", 8999))
 
-    def handle_message(self, message, sender):
-        msg_type = message.get("type")
-        if msg_type == "GOSSIP":
-            print(f"Received GOSSIP from {sender}: {message}")
-            self.peers.add((message["host"], message["port"]))
-            reply = {"type": "GOSSIP_REPLY", "host": self.host, "port": self.port, "name": self.name}
-            self.sock.sendto(json.dumps(reply).encode(), sender)
-        elif msg_type == "GOSSIP_REPLY":
-            print(f"Received GOSSIP_REPLY from {sender}: {message}")
-            self.peers.add((message["host"], message["port"]))
-        elif msg_type == "STATS":
-            print(f"Received STATS request from {sender}")
-            response = {
-                "type": "STATS_REPLY",
-                "height": len(self.blockchain),
-                "hash": self.hash_block(self.blockchain[-1]) if self.blockchain else None,
-            }
-            self.sock.sendto(json.dumps(response).encode(), sender)
-        elif msg_type == "GET_BLOCK":
-            block_height = message.get("height")
-            if 0 <= block_height < len(self.blockchain):
-                block = self.blockchain[block_height]
-                response = {"type": "GET_BLOCK_REPLY", "block": block}
-                self.sock.sendto(json.dumps(response).encode(), sender)
-        elif msg_type == "GET_BLOCK_REPLY":
-            print(f"Received block from {sender}: {message}")
-        elif msg_type == "STATS_REPLY":
-            print(f"Received STATS_REPLY from {sender}: {message}")
-
-    def perform_consensus(self):
-        print("Performing consensus...")
-        stats_responses = []
-
-        # Step 1: Send STATS to all peers
-        for peer in self.peers:
-            try:
-                message = {"type": "STATS"}
-                self.sock.sendto(json.dumps(message).encode(), peer)
-                print(f"Sent STATS to {peer}")
-            except Exception as e:
-                print(f"Failed to send STATS to {peer}: {e}")
-
-        # Step 2: Collect STATS_REPLY responses
-        start_time = time.time()
-        while time.time() - start_time < 5:  # Wait for 5 seconds
-            try:
-                data, sender = self.sock.recvfrom(1024)
-                message = json.loads(data)
-                if message.get("type") == "STATS_REPLY":
-                    stats_responses.append((sender, message))
-            except socket.timeout:
-                break
-
-        if not stats_responses:
-            print("No STATS responses received. Cannot perform consensus.")
-            return
-
-        # Step 3: Determine the longest chain
-        longest_chain_peer = max(stats_responses, key=lambda x: x[1]["height"])
-        target_peer = longest_chain_peer[0]
-        target_height = longest_chain_peer[1]["height"]
-        print(f"Longest chain found at {target_peer} with height {target_height}")
-
-        # Step 4: Fetch blocks
-        self.blockchain = []
-        for height in range(target_height):
-            block = None
-            for peer, stats in stats_responses:
-                try:
-                    message = {"type": "GET_BLOCK", "height": height}
-                    self.sock.sendto(json.dumps(message).encode(), peer)
-                    data, sender = self.sock.recvfrom(1024)
-                    response = json.loads(data)
-                    if response.get("type") == "GET_BLOCK_REPLY":
-                        block = response["block"]
-                        break
-                except Exception as e:
-                    print(f"Failed to fetch block {height} from {peer}: {e}")
-
-            if block:
-                self.blockchain.append(block)
-            else:
-                print(f"Block {height} not found. Consensus failed.")
-                return
-
-        # Step 5: Verify blockchain
-        if self.verify_blockchain():
-            print("Blockchain successfully loaded and verified.")
-        else:
-            print("Blockchain verification failed.")
-
-    def verify_blockchain(self):
-        for i in range(1, len(self.blockchain)):
-            prev_block = self.blockchain[i - 1]
-            current_block = self.blockchain[i]
-            if current_block["previous_hash"] != self.hash_block(prev_block):
-                return False
-            if not self.validate_proof_of_work(current_block):
-                return False
-        return True
-
-    def hash_block(self, block):
-        return json.dumps(block, sort_keys=True)
-
-    def validate_proof_of_work(self, block):
-        difficulty = block.get("difficulty", 1)
-        block_hash = self.hash_block(block)
-        return block_hash.startswith("0" * difficulty)
+        while True:
+            message, addr = self.receive_message()
+            if message:
+                if message['type'] == "GOSSIP":
+                    self.handle_gossip(message, addr)
+                elif message['type'] == "STATS":
+                    self.handle_stats(addr)
+                elif message['type'] == "GET_BLOCK":
+                    self.handle_get_block(message, addr)
+                elif message['type'] == "CONSENSUS":
+                    self.perform_consensus()
 
 
 if __name__ == "__main__":
     import sys
-
-    if len(sys.argv) < 3:
+    if len(sys.argv) != 3:
         print("Usage: python Peer.py <host> <port>")
         sys.exit(1)
 
     host = sys.argv[1]
     port = int(sys.argv[2])
-    peer = Peer(host, port)
+    name = "Ali Verstappen"
+
+    peer = Peer(host, port, name)
     peer.run()
