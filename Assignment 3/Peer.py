@@ -47,7 +47,7 @@ class Peer:
         elif message_type == "GET_BLOCK_REPLY":
             self.handle_get_block_reply(message)
         elif message_type == "STATS_REPLY":
-            self.handle_stats_reply(message, sender)
+            self.handle_stats_reply(message)
         else:
             print(f"Unknown message type: {message_type}")
 
@@ -154,10 +154,11 @@ class Peer:
     def build_chain(self, target_height):
         # Ensure all blocks are received and in order
         for height in range(target_height + 1):
-            if height not in self.pending_blocks:
+            while height not in self.pending_blocks:
                 print(f"Block at height {height} missing, retrying...")
                 self.request_block(height)
-                time.sleep(0.1)  # Give time for responses
+                time.sleep(0.2)  # Give time for responses
+
         # Verify blocks and rebuild the chain
         self.chain = [
             self.pending_blocks[height] for height in range(target_height + 1)
