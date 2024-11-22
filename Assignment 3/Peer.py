@@ -13,10 +13,10 @@ class Peer:
         self.id = str(uuid.uuid4())
         self.peers = [("eagle.cs.umanitoba.ca", 8999)]  # Well-known peers
         self.chain = []
+        self.pending_blocks = {}
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
-        self.sock.settimeout(2)  # Increased timeout for slower responses
-        self.pending_blocks = {}  # Store blocks by height during fetching
+        self.sock.settimeout(1)
 
     def send_message(self, message, destination):
         try:
@@ -48,8 +48,6 @@ class Peer:
             self.handle_get_block_reply(message)
         elif message_type == "STATS_REPLY":
             self.handle_stats_reply(message)
-        else:
-            print(f"Unknown message type: {message_type}")
 
     def handle_gossip(self, message, sender):
         if sender not in self.peers:
@@ -145,7 +143,7 @@ class Peer:
             }
         self.send_message(reply, sender)
 
-        def handle_get_block_reply(self, message):
+    def handle_get_block_reply(self, message):
         height = message.get("height")
 
         # Ignore if height is invalid or already received
@@ -178,7 +176,6 @@ class Peer:
                 self.chain = []  # Reset chain on invalid block
                 return
         print(f"Successfully rebuilt chain up to height {target_height}.")
-
 
     def validate_block(self, block, height):
         if height == 0:  # Genesis block
