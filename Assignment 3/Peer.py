@@ -4,7 +4,7 @@ import sys
 import time
 import threading
 import uuid
-from Blockchain import Blockchain
+from blockchain import Blockchain
 from message_handler import handle_message
 
 
@@ -14,6 +14,7 @@ class Peer:
     def __init__(self, host, port):
         self.host = host
         self.port = port
+        self.name = "Ali Verstappen"  # Hardcoded custom peer name
         self.peers = set()  # Set of known peers
         self.blockchain = Blockchain()  # Initialize blockchain
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP socket
@@ -28,7 +29,7 @@ class Peer:
             "host": self.host,
             "port": self.port,
             "id": str(uuid.uuid4()),
-            "name": f"Peer_{self.host}_{self.port}"
+            "name": self.name  # Use hardcoded peer name
         }
         try:
             message_json = json.dumps(message)
@@ -45,7 +46,7 @@ class Peer:
             "host": self.host,
             "port": self.port,
             "id": str(uuid.uuid4()),
-            "name": f"Peer_{self.host}_{self.port}"
+            "name": self.name  # Use hardcoded peer name
         }
         for peer in list(self.peers)[:3]:  # Limit to 3 peers
             try:
@@ -75,7 +76,7 @@ class Peer:
 
     def run(self):
         """Run the peer."""
-        print(f"Peer running at {self.host}:{self.port}")
+        print(f"Peer running at {self.host}:{self.port} with name '{self.name}'")
         # Start listening for messages in a separate thread
         listener = threading.Thread(target=self.listen, daemon=True)
         listener.start()
