@@ -10,7 +10,7 @@ class Peer:
         self.port = port
         self.name = name
         self.id = str(uuid.uuid4())
-        self.peers = [("eagle.cs.umanitoba.ca", 8999)]  # Include the eagle peer as a known host
+        self.peers = [("eagle.cs.umanitoba.ca", 8999)]  # Include the eagle peer
         self.chain = []
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
@@ -31,7 +31,6 @@ class Peer:
             "id": self.id,
             "name": self.name,
         }
-        # Gossip to all known peers
         for peer in self.peers:
             self.send_message(message, peer)
 
@@ -77,7 +76,6 @@ class Peer:
             print("No STATS responses received. Cannot perform consensus.")
             return
 
-        # Determine the chain with the highest height
         best_chain = max(
             stats_responses,
             key=lambda x: (x["height"], x["hash"]),
@@ -110,6 +108,29 @@ class Peer:
             }
         else:
             reply = {"type": "STATS_REPLY", "height": 0, "hash": None}
+        self.send_message(reply, sender)
+
+    def handle_get_block(self, message, sender):
+        height = message.get("height")
+        if height is None or height >= len(self.chain):
+            reply = {
+                "type": "GET_BLOCK_REPLY",
+                "height": None,
+                "messages": None,
+                "nonce": None,
+                "minedBy": None,
+            }
+        else:
+            block = self.chain[height]
+            reply = {
+                "type": "GET_BLOCK_REPLY",
+                "height": height,
+                "messages": block["messages"],
+                "nonce": block["nonce"],
+                "minedBy": block["minedBy"],
+                "hash": block["hash"],
+                "timestamp": block["timestamp"],
+            }
         self.send_message(reply, sender)
 
     def run(self):
