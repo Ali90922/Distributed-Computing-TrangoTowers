@@ -17,7 +17,7 @@ class Peer:
         self.peers = set()  # Set of known peers
         self.blockchain = Blockchain()  # Initialize blockchain
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP socket
-        self.sock.bind((self.host, self.port))
+        self.sock.bind((self.host, self.port))  # Bind to the machine's address and port
         self.sock.settimeout(5)  # Timeout for socket operations
 
     def join_network(self):
@@ -33,9 +33,10 @@ class Peer:
         try:
             message_json = json.dumps(message)
             print(f"Sending message: {message_json}")
+            print(f"Destination: {well_known_host}")
             self.sock.sendto(message_json.encode(), well_known_host)
         except OSError as e:
-            print(f"Failed to send GOSSIP: {e}")
+            print(f"Failed to send GOSSIP to {well_known_host}: {e}")
 
     def gossip(self):
         """Send GOSSIP messages to up to 3 known peers."""
@@ -93,7 +94,7 @@ if __name__ == "__main__":
         print("Usage: python Peer.py <host> <port>")
         sys.exit(1)
 
-    host = sys.argv[1]
+    host = sys.argv[1]  # Use your machine's IP address
     port = int(sys.argv[2])
 
     peer = Peer(host, port)
