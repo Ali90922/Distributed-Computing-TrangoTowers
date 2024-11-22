@@ -6,10 +6,10 @@ import hashlib
 import random
 
 class Peer:
-    def __init__(self, host, port, name):
+    def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.name = name
+        self.name = "Ali Verstappen"  # Hardcoded name
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
         self.peers = []  # List of known peers
@@ -187,12 +187,11 @@ class Peer:
 if __name__ == "__main__":
     import sys
 
-    if len(sys.argv) != 4:
-        print("Usage: python Peer.py <host> <port> <name>")
+    if len(sys.argv) != 3:
+        print("Usage: python Peer.py <host> <port>")
         sys.exit(1)
 
     host = sys.argv[1]
     port = int(sys.argv[2])
-    name = sys.argv[3]
-    peer = Peer(host, port, name)
+    peer = Peer(host, port)
     peer.run()
