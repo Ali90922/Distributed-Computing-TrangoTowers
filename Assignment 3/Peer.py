@@ -15,7 +15,7 @@ class Peer:
         self.chain = []
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
-        self.sock.settimeout(1)
+        self.sock.settimeout(2)  # Increased timeout for slower responses
         self.pending_blocks = {}  # Store blocks by height during fetching
 
     def send_message(self, message, destination):
@@ -154,10 +154,15 @@ class Peer:
     def build_chain(self, target_height):
         # Ensure all blocks are received and in order
         for height in range(target_height + 1):
+            retries = 0
             while height not in self.pending_blocks:
                 print(f"Block at height {height} missing, retrying...")
                 self.request_block(height)
-                time.sleep(0.2)  # Give time for responses
+                time.sleep(0.5)  # Give time for responses
+                retries += 1
+                if retries > 10:  # Stop after 10 retries
+                    print(f"Failed to fetch block at height {height}.")
+                    return
 
         # Verify blocks and rebuild the chain
         self.chain = [
