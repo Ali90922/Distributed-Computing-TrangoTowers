@@ -3,6 +3,7 @@ import json
 import time
 import uuid
 import hashlib
+import random
 
 
 class Peer:
@@ -11,7 +12,13 @@ class Peer:
         self.port = port
         self.name = name
         self.id = str(uuid.uuid4())
-        self.peers = [("eagle.cs.umanitoba.ca", 8999)]  # Well-known peers
+        self.peers = [
+            ("silicon.cs.umanitoba.ca", 8999),
+            ("eagle.cs.umanitoba.ca", 8999),
+            ("goose.cs.umanitoba.ca", 8999),
+            ("hawk.cs.umanitoba.ca", 8999),
+            ("goose.cs.umanitoba.ca", 8997),
+        ]  # Reliable peers
         self.chain = []
         self.pending_blocks = {}
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -100,7 +107,6 @@ class Peer:
         for height in range(best_chain["height"] + 1):
             self.request_block(height)
 
-        # Wait for replies and build the chain
         self.build_chain(best_chain["height"])
 
     def request_block(self, height):
@@ -146,30 +152,30 @@ class Peer:
     def handle_get_block_reply(self, message):
         height = message.get("height")
 
-        # Ignore if height is invalid or already received
         if height is None or height in self.pending_blocks:
             print(f"Ignoring redundant or invalid block reply for height {height}.")
             return
 
-        # Add block to pending blocks
         self.pending_blocks[height] = message
         print(f"Received block at height {height}.")
 
     def build_chain(self, target_height):
-        # Dynamically fetch missing blocks
         for height in range(target_height + 1):
             retries = 0
             while height not in self.pending_blocks:
                 print(f"Block at height {height} missing, retrying...")
                 self.request_block(height)
-                time.sleep(0.5)  # Give time for responses
+                time.sleep(random.uniform(0.5, 1.5))  # Randomized delay
                 retries += 1
-                if retries > 10:  # Stop after 10 retries
+                if retries > 15:  # Retry up to 15 times
                     print(f"Failed to fetch block at height {height}. Skipping.")
-                    break  # Skip this block and continue to next
+                    break
 
-        # Rebuild the chain from received blocks
-        self.chain = [self.pending_blocks[h] for h in sorted(self.pending_blocks.keys())]
+        self.chain = [self.pending_blocks.get(h) for h in range(target_height + 1)]
+        if None in self.chain:
+            print("Incomplete chain fetched. Missing blocks.")
+            return
+
         for i, block in enumerate(self.chain):
             if not self.validate_block(block, i):
                 print(f"Invalid block detected at height {i}. Resetting chain.")
@@ -180,7 +186,6 @@ class Peer:
     def validate_block(self, block, height):
         if height == 0:  # Genesis block
             return True
-        # Validate hash and previous hash chaining
         previous_hash = self.chain[height - 1]["hash"]
         expected_hash = self.compute_block_hash(block, previous_hash)
         return block["hash"] == expected_hash
