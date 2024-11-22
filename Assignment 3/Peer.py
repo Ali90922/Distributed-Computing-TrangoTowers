@@ -145,14 +145,20 @@ class Peer:
             }
         self.send_message(reply, sender)
 
-    def handle_get_block_reply(self, message):
+        def handle_get_block_reply(self, message):
         height = message.get("height")
-        if height is not None and height >= 0:
-            self.pending_blocks[height] = message
-            print(f"Received block at height {height}.")
+
+        # Ignore if height is invalid or already received
+        if height is None or height in self.pending_blocks:
+            print(f"Ignoring redundant or invalid block reply for height {height}.")
+            return
+
+        # Add block to pending blocks
+        self.pending_blocks[height] = message
+        print(f"Received block at height {height}.")
 
     def build_chain(self, target_height):
-        # Ensure all blocks are received and in order
+        # Dynamically fetch missing blocks
         for height in range(target_height + 1):
             retries = 0
             while height not in self.pending_blocks:
@@ -161,21 +167,18 @@ class Peer:
                 time.sleep(0.5)  # Give time for responses
                 retries += 1
                 if retries > 10:  # Stop after 10 retries
-                    print(f"Failed to fetch block at height {height}.")
-                    return
+                    print(f"Failed to fetch block at height {height}. Skipping.")
+                    break  # Skip this block and continue to next
 
-        # Verify blocks and rebuild the chain
-        self.chain = [
-            self.pending_blocks[height] for height in range(target_height + 1)
-        ]
-        self.chain.sort(key=lambda x: x["height"])
-        for i in range(len(self.chain)):
-            block = self.chain[i]
+        # Rebuild the chain from received blocks
+        self.chain = [self.pending_blocks[h] for h in sorted(self.pending_blocks.keys())]
+        for i, block in enumerate(self.chain):
             if not self.validate_block(block, i):
-                print(f"Invalid block detected at height {i}.")
+                print(f"Invalid block detected at height {i}. Resetting chain.")
                 self.chain = []  # Reset chain on invalid block
                 return
-        print(f"Chain successfully rebuilt to height {target_height}.")
+        print(f"Successfully rebuilt chain up to height {target_height}.")
+
 
     def validate_block(self, block, height):
         if height == 0:  # Genesis block
