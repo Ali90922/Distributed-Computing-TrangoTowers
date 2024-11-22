@@ -4,7 +4,7 @@ import sys
 import time
 import threading
 import uuid
-from Blockchain import Blockchain
+from blockchain import Blockchain
 from message_handler import handle_message
 
 
@@ -14,11 +14,11 @@ class Peer:
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.peers = set()  # List of known peers
+        self.peers = set()  # Set of known peers
         self.blockchain = Blockchain()  # Initialize blockchain
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP socket
         self.sock.bind((self.host, self.port))
-        self.sock.settimeout(5)
+        self.sock.settimeout(5)  # Timeout for socket operations
 
     def join_network(self):
         """Send an initial GOSSIP message to the well-known host."""
@@ -30,11 +30,15 @@ class Peer:
             "id": str(uuid.uuid4()),
             "name": f"Peer_{self.host}_{self.port}"
         }
-        self.sock.sendto(json.dumps(message).encode(), well_known_host)
-        print(f"Sent GOSSIP to well-known host {well_known_host}")
+        try:
+            message_json = json.dumps(message)
+            print(f"Sending message: {message_json}")
+            self.sock.sendto(message_json.encode(), well_known_host)
+        except OSError as e:
+            print(f"Failed to send GOSSIP: {e}")
 
     def gossip(self):
-        """Send GOSSIP messages to known peers."""
+        """Send GOSSIP messages to up to 3 known peers."""
         message = {
             "type": "GOSSIP",
             "host": self.host,
@@ -42,11 +46,11 @@ class Peer:
             "id": str(uuid.uuid4()),
             "name": f"Peer_{self.host}_{self.port}"
         }
-        for peer in list(self.peers)[:3]:  # Send to up to 3 peers
+        for peer in list(self.peers)[:3]:  # Limit to 3 peers
             try:
                 self.sock.sendto(json.dumps(message).encode(), peer)
                 print(f"Sent GOSSIP to {peer}")
-            except Exception as e:
+            except OSError as e:
                 print(f"Failed to send GOSSIP to {peer}: {e}")
 
     def listen(self):
@@ -55,25 +59,30 @@ class Peer:
             try:
                 data, addr = self.sock.recvfrom(1024)
                 message = json.loads(data.decode())
+                print(f"Received message from {addr}: {message}")
+
+                # Handle the incoming message and send a response if needed
                 response = handle_message(message, self, addr)
                 if response:
                     self.sock.sendto(json.dumps(response).encode(), addr)
             except socket.timeout:
-                continue
+                continue  # Timeout occurred, retry listening
+            except json.JSONDecodeError as e:
+                print(f"Invalid JSON received from {addr}: {data.decode()}")
             except Exception as e:
                 print(f"Error handling message: {e}")
 
     def run(self):
         """Run the peer."""
         print(f"Peer running at {self.host}:{self.port}")
-        # Start listening for messages
+        # Start listening for messages in a separate thread
         listener = threading.Thread(target=self.listen, daemon=True)
         listener.start()
 
         # Join the network
         self.join_network()
 
-        # Main loop for gossiping
+        # Main loop for periodic gossiping
         while True:
             self.gossip()
             time.sleep(self.GOSSIP_INTERVAL)
