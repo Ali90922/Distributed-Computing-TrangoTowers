@@ -10,7 +10,7 @@ class Peer:
         self.port = port
         self.name = name
         self.id = str(uuid.uuid4())
-        self.peers = [("eagle.cs.umanitoba.ca", 8999)]  # Include the eagle peer
+        self.peers = [("eagle.cs.umanitoba.ca", 8999)]  # Well-known peers
         self.chain = []
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
@@ -42,7 +42,8 @@ class Peer:
             self.handle_stats_request(sender)
         elif message_type == "GET_BLOCK":
             self.handle_get_block(message, sender)
-        # Add other message handlers as needed
+        elif message_type == "GET_BLOCK_REPLY":
+            self.handle_get_block_reply(message)
 
     def handle_gossip(self, message, sender):
         if sender not in self.peers:
@@ -76,6 +77,7 @@ class Peer:
             print("No STATS responses received. Cannot perform consensus.")
             return
 
+        # Find the best chain (longest height and matching hash)
         best_chain = max(
             stats_responses,
             key=lambda x: (x["height"], x["hash"]),
@@ -90,8 +92,12 @@ class Peer:
         self.send_message(message, peer)
 
     def fetch_chain(self, best_chain):
+        print(f"Fetching chain up to height {best_chain['height']}...")
         for height in range(best_chain["height"] + 1):
             self.request_block(height)
+
+        # Wait for replies and build the chain
+        self.build_chain(best_chain["height"])
 
     def request_block(self, height):
         message = {"type": "GET_BLOCK", "height": height}
@@ -132,6 +138,41 @@ class Peer:
                 "timestamp": block["timestamp"],
             }
         self.send_message(reply, sender)
+
+    def handle_get_block_reply(self, message):
+        height = message.get("height")
+        if height is not None and height >= 0:
+            self.chain.append(message)
+            print(f"Added block at height {height} to chain.")
+
+    def build_chain(self, target_height):
+        # Verify blocks and rebuild the chain
+        self.chain.sort(key=lambda x: x["height"])  # Ensure blocks are in order
+        for i in range(len(self.chain)):
+            block = self.chain[i]
+            if not self.validate_block(block, i):
+                print(f"Invalid block detected at height {i}.")
+                self.chain = []  # Reset chain on invalid block
+                return
+        print(f"Chain successfully rebuilt to height {target_height}.")
+
+    def validate_block(self, block, height):
+        if height == 0:  # Genesis block
+            return True
+        # Validate hash and previous hash chaining
+        previous_hash = self.chain[height - 1]["hash"]
+        expected_hash = self.compute_block_hash(block, previous_hash)
+        return block["hash"] == expected_hash
+
+    def compute_block_hash(self, block, previous_hash):
+        hash_base = hashlib.sha256()
+        hash_base.update(previous_hash.encode())
+        hash_base.update(block["minedBy"].encode())
+        for msg in block["messages"]:
+            hash_base.update(msg.encode())
+        hash_base.update(block["timestamp"].to_bytes(8, "big"))
+        hash_base.update(block["nonce"].encode())
+        return hash_base.hexdigest()
 
     def run(self):
         self.gossip()
