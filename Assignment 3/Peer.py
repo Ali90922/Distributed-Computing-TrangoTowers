@@ -4,6 +4,7 @@ import time
 import uuid
 import hashlib
 
+
 class Peer:
     def __init__(self, host, port, name):
         self.host = host
@@ -15,6 +16,7 @@ class Peer:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
         self.sock.settimeout(1)
+        self.pending_blocks = {}  # Store blocks by height during fetching
 
     def send_message(self, message, destination):
         try:
@@ -44,6 +46,10 @@ class Peer:
             self.handle_get_block(message, sender)
         elif message_type == "GET_BLOCK_REPLY":
             self.handle_get_block_reply(message)
+        elif message_type == "STATS_REPLY":
+            self.handle_stats_reply(message, sender)
+        else:
+            print(f"Unknown message type: {message_type}")
 
     def handle_gossip(self, message, sender):
         if sender not in self.peers:
@@ -142,12 +148,21 @@ class Peer:
     def handle_get_block_reply(self, message):
         height = message.get("height")
         if height is not None and height >= 0:
-            self.chain.append(message)
-            print(f"Added block at height {height} to chain.")
+            self.pending_blocks[height] = message
+            print(f"Received block at height {height}.")
 
     def build_chain(self, target_height):
+        # Ensure all blocks are received and in order
+        for height in range(target_height + 1):
+            if height not in self.pending_blocks:
+                print(f"Block at height {height} missing, retrying...")
+                self.request_block(height)
+                time.sleep(0.1)  # Give time for responses
         # Verify blocks and rebuild the chain
-        self.chain.sort(key=lambda x: x["height"])  # Ensure blocks are in order
+        self.chain = [
+            self.pending_blocks[height] for height in range(target_height + 1)
+        ]
+        self.chain.sort(key=lambda x: x["height"])
         for i in range(len(self.chain)):
             block = self.chain[i]
             if not self.validate_block(block, i):
