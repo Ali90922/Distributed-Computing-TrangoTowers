@@ -9,7 +9,8 @@ RETRY_LIMIT = 5
 FETCH_TIMEOUT = 30  # seconds
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(message)s")
+
 
 class Peer:
     def __init__(self, host, port, name):
@@ -52,7 +53,7 @@ class Peer:
 
     def handle_message(self, message, sender):
         message_type = message.get("type")
-        
+
         # Log received messages
         logging.info(f"Received {message_type} from {sender}")
 
@@ -70,6 +71,8 @@ class Peer:
             self.handle_get_block_reply(message)
         elif message_type == "GOSSIP":
             logging.info(f"Suppressed GOSSIP during fetch.")
+        elif message_type == "STATS":
+            logging.debug(f"Received STATS: {message}")
         else:
             logging.warning(f"Unhandled message type: {message_type}")
 
@@ -152,8 +155,13 @@ class Peer:
                 logging.error("Timeout while fetching blockchain.")
                 return
 
-        self.chain = [self.pending_blocks[height] for height in sorted(self.pending_blocks)]
-        logging.info(f"Successfully fetched blockchain up to height {target_height}.")
+        # Ensure all blocks are present
+        if sorted(self.pending_blocks.keys()) == list(range(target_height + 1)):
+            self.chain = [self.pending_blocks[height] for height in sorted(self.pending_blocks)]
+            logging.info(f"Successfully fetched blockchain up to height {target_height}.")
+            self.fetching = False  # Exit fetch mode
+        else:
+            logging.warning(f"Incomplete chain: {self.pending_blocks.keys()}")
 
     def run(self):
         logging.info("Starting peer...")
@@ -170,6 +178,7 @@ class Peer:
                     continue
         except KeyboardInterrupt:
             logging.info("Shutting down peer. Goodbye!")
+
 
 if __name__ == "__main__":
     import sys
