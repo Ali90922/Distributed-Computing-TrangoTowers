@@ -3,7 +3,6 @@ import json
 import time
 import uuid
 import hashlib
-import random
 
 
 class Peer:
@@ -24,6 +23,7 @@ class Peer:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
         self.sock.settimeout(1)
+        self.fetching = False  # To prevent distractions during fetch
 
     def send_message(self, message, destination):
         try:
@@ -45,27 +45,29 @@ class Peer:
 
     def handle_message(self, message, sender):
         message_type = message.get("type")
+
+        # Always respond to PING messages
+        if message_type == "PING":
+            self.handle_ping(sender)
+            return
+
+        # Ignore other messages if fetching blocks
+        if self.fetching and message_type != "GET_BLOCK_REPLY":
+            return
+
         if message_type == "GOSSIP":
-            self.handle_gossip(message, sender)
+            return  # Suppressed during fetch
         elif message_type == "STATS":
-            self.handle_stats_request(sender)
+            return  # Suppressed during fetch
         elif message_type == "GET_BLOCK":
-            self.handle_get_block(message, sender)
+            return  # Suppressed during fetch
         elif message_type == "GET_BLOCK_REPLY":
             self.handle_get_block_reply(message)
-        elif message_type == "STATS_REPLY":
-            self.handle_stats_reply(message)
 
-    def handle_gossip(self, message, sender):
-        if sender not in self.peers:
-            self.peers.append(sender)
-        reply = {
-            "type": "GOSSIP_REPLY",
-            "host": self.host,
-            "port": self.port,
-            "name": self.name,
-        }
-        self.send_message(reply, (message["host"], message["port"]))
+    def handle_ping(self, sender):
+        reply = {"type": "PONG", "host": self.host, "port": self.port}
+        self.send_message(reply, sender)
+        print(f"Responded to PING from {sender}")
 
     def perform_consensus(self):
         print("Performing consensus...")
@@ -104,101 +106,49 @@ class Peer:
 
     def fetch_chain(self, best_chain):
         print(f"Fetching chain up to height {best_chain['height']}...")
-        for height in range(best_chain["height"] + 1):
-            self.request_block(height)
+        self.fetching = True  # Block distractions during fetch
+        retries = {}
 
-        self.build_chain(best_chain["height"])
+        for height in range(best_chain["height"] + 1):
+            retries[height] = 0
+            self.request_block(height)
+            time.sleep(0.01)  # Small delay to allow message handling
+
+        # Wait for replies and build the chain
+        self.build_chain(best_chain["height"], retries)
+        self.fetching = False  # Allow normal handling after fetch
 
     def request_block(self, height):
         message = {"type": "GET_BLOCK", "height": height}
         for peer in self.peers:
             self.send_message(message, peer)
 
-    def handle_stats_request(self, sender):
-        if self.chain:
-            last_block = self.chain[-1]
-            reply = {
-                "type": "STATS_REPLY",
-                "height": len(self.chain) - 1,
-                "hash": last_block["hash"],
-            }
-        else:
-            reply = {"type": "STATS_REPLY", "height": 0, "hash": None}
-        self.send_message(reply, sender)
-
-    def handle_get_block(self, message, sender):
-        height = message.get("height")
-        if height is None or height >= len(self.chain):
-            reply = {
-                "type": "GET_BLOCK_REPLY",
-                "height": None,
-                "messages": None,
-                "nonce": None,
-                "minedBy": None,
-            }
-        else:
-            block = self.chain[height]
-            reply = {
-                "type": "GET_BLOCK_REPLY",
-                "height": height,
-                "messages": block["messages"],
-                "nonce": block["nonce"],
-                "minedBy": block["minedBy"],
-                "hash": block["hash"],
-                "timestamp": block["timestamp"],
-            }
-        self.send_message(reply, sender)
-
     def handle_get_block_reply(self, message):
         height = message.get("height")
+        if height is not None and height >= 0:
+            self.pending_blocks[height] = message
+            print(f"Received block at height {height}.")
 
-        if height is None or height in self.pending_blocks:
-            print(f"Ignoring redundant or invalid block reply for height {height}.")
-            return
+    def build_chain(self, target_height, retries):
+        start_time = time.time()
+        while len(self.pending_blocks) <= target_height:
+            for height in range(target_height + 1):
+                if height not in self.pending_blocks:
+                    retries[height] += 1
+                    if retries[height] > 3:  # Retry limit
+                        print(f"Failed to fetch block at height {height}. Aborting.")
+                        return
+                    print(f"Block at height {height} missing, retrying...")
+                    self.request_block(height)
 
-        self.pending_blocks[height] = message
-        print(f"Received block at height {height}.")
-
-    def build_chain(self, target_height):
-        for height in range(target_height + 1):
-            retries = 0
-            while height not in self.pending_blocks:
-                print(f"Block at height {height} missing, retrying...")
-                self.request_block(height)
-                time.sleep(random.uniform(0.5, 1.5))  # Randomized delay
-                retries += 1
-                if retries > 15:  # Retry up to 15 times
-                    print(f"Failed to fetch block at height {height}. Skipping.")
-                    break
-
-        self.chain = [self.pending_blocks.get(h) for h in range(target_height + 1)]
-        if None in self.chain:
-            print("Incomplete chain fetched. Missing blocks.")
-            return
-
-        for i, block in enumerate(self.chain):
-            if not self.validate_block(block, i):
-                print(f"Invalid block detected at height {i}. Resetting chain.")
-                self.chain = []  # Reset chain on invalid block
+            # Timeout mechanism
+            if time.time() - start_time > 30:  # Stop after 30 seconds
+                print("Timeout while fetching blockchain.")
                 return
-        print(f"Successfully rebuilt chain up to height {target_height}.")
 
-    def validate_block(self, block, height):
-        if height == 0:  # Genesis block
-            return True
-        previous_hash = self.chain[height - 1]["hash"]
-        expected_hash = self.compute_block_hash(block, previous_hash)
-        return block["hash"] == expected_hash
-
-    def compute_block_hash(self, block, previous_hash):
-        hash_base = hashlib.sha256()
-        hash_base.update(previous_hash.encode())
-        hash_base.update(block["minedBy"].encode())
-        for msg in block["messages"]:
-            hash_base.update(msg.encode())
-        hash_base.update(block["timestamp"].to_bytes(8, "big"))
-        hash_base.update(block["nonce"].encode())
-        return hash_base.hexdigest()
+        # Build the full chain
+        self.chain = [self.pending_blocks[height] for height in sorted(self.pending_blocks)]
+        print(f"Successfully fetched blockchain up to height {target_height}.")
 
     def run(self):
         self.gossip()
