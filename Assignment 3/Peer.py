@@ -3,7 +3,6 @@ import json
 import time
 import uuid
 import logging
-from datetime import datetime
 
 # Constants for retries and timeouts
 RETRY_LIMIT = 5
@@ -53,14 +52,24 @@ class Peer:
 
     def handle_message(self, message, sender):
         message_type = message.get("type")
+        
+        # Log received messages
         logging.info(f"Received {message_type} from {sender}")
 
+        # Always respond to PING messages
         if message_type == "PING":
             self.handle_ping(sender)
-        elif message_type == "GET_BLOCK_REPLY":
+            return
+
+        # Ignore all other messages except GET_BLOCK_REPLY if fetching blocks
+        if self.fetching and message_type != "GET_BLOCK_REPLY":
+            logging.info(f"Ignoring {message_type} during blockchain fetch.")
+            return
+
+        if message_type == "GET_BLOCK_REPLY":
             self.handle_get_block_reply(message)
-        elif self.fetching:
-            logging.debug(f"Ignoring {message_type} during fetch.")
+        elif message_type == "GOSSIP":
+            logging.info(f"Suppressed GOSSIP during fetch.")
         else:
             logging.warning(f"Unhandled message type: {message_type}")
 
