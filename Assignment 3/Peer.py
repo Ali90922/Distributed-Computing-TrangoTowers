@@ -41,6 +41,19 @@ class Peer:
         except Exception as e:
             logging.error(f"Failed to send {message['type']} to {destination}: {e}")
 
+    def gossip(self):
+        """Send GOSSIP message to all peers."""
+        message = {
+            "type": "GOSSIP",
+            "host": self.host,
+            "port": self.port,
+            "id": self.id,
+            "name": self.name,
+        }
+        for peer in self.peers:
+            self.send_message(message, peer)
+        logging.info("GOSSIP messages sent to all peers.")
+
     def handle_message(self, message, sender):
         message_type = message.get("type")
 
