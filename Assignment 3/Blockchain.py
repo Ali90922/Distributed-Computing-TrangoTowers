@@ -47,13 +47,25 @@ class Blockchain:
     def is_valid_block(self, block, prev_block):
         """Check if a block is valid."""
         if block['height'] != prev_block['height'] + 1:
+            print(f"Invalid block height: {block['height']} (expected {prev_block['height'] + 1})")
             return False
         if prev_block['hash'] != block['hash']:
+            print(f"Previous block hash mismatch: {prev_block['hash']} != {block['hash']}")
             return False
         if not block['hash'].endswith('0' * self.DIFFICULTY):
+            print(f"Block hash does not meet difficulty: {block['hash']}")
             return False
         if self.calculate_hash(block) != block['hash']:
+            print(f"Hash mismatch: calculated {self.calculate_hash(block)} != {block['hash']}")
             return False
+        return True
+
+    def validate_fetched_chain(self, fetched_chain):
+        """Validate the entire fetched chain."""
+        for i in range(1, len(fetched_chain)):
+            if not self.is_valid_block(fetched_chain[i], fetched_chain[i - 1]):
+                print(f"Fetched chain is invalid at block {i}")
+                return False
         return True
 
     def add_block_from_response(self, response):
