@@ -9,12 +9,7 @@ class Peer:
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.peers = {
-            ("goose.cs.umanitoba.ca", 8999),
-            ("eagle.cs.umanitoba.ca", 8999),
-            ("silicon.cs.umanitoba.ca", 8999),
-            ("hawk.cs.umanitoba.ca", 8999),
-        }
+        self.well_known_peer = ("goose.cs.umanitoba.ca", 8999)  # Fetch from a single well-known peer
         self.blockchain = Blockchain()  # Initialize the blockchain
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
@@ -22,10 +17,13 @@ class Peer:
 
     def perform_consensus(self):
         """
-        Fetch the blockchain from peers using BlockchainFetcher and update local blockchain.
+        Fetch the blockchain from a single well-known peer using BlockchainFetcher and update local blockchain.
         """
+        peer_host, peer_port = self.well_known_peer
+        print(f"Fetching blockchain from {peer_host}:{peer_port}...")
         fetcher = BlockchainFetcher(self.blockchain)
-        fetcher.fetch_all_blocks()  # Fetch and update the blockchain
+        fetcher.fetch_all_blocks(peer_host, peer_port)  # Fetch and update the blockchain
+        print(f"Consensus complete with blockchain height: {len(self.blockchain.chain) - 1}")
 
     def handle_message(self, message, addr):
         """
@@ -34,10 +32,12 @@ class Peer:
         msg_type = message.get("type")
 
         if msg_type == "STATS":
+            # Respond with local blockchain stats
             response = self.blockchain.get_stats()
             self.send_message(response, addr)
 
         elif msg_type == "GET_BLOCK":
+            # Return a specific block
             height = message.get("height")
             if height is not None and 0 <= height < len(self.blockchain.chain):
                 block = self.blockchain.chain[height]
@@ -58,6 +58,8 @@ class Peer:
             self.send_message(response, addr)
 
         elif msg_type == "CONSENSUS":
+            # Perform consensus triggered by an external request
+            print("Performing consensus triggered by external request.")
             self.perform_consensus()
 
     def send_message(self, message, destination):
