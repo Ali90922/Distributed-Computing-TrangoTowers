@@ -55,46 +55,68 @@ class Peer:
         return None
 
     def perform_consensus(self):
-        """Fetch the blockchain from peers using BlockchainFetcher."""
-        if not self.peers:
-            print("No dynamic peers found. Falling back to well-known peers.")
-            self.peers = {
-                ("goose.cs.umanitoba.ca", 8999),
-                ("eagle.cs.umanitoba.ca", 8999),
-                ("silicon.cs.umanitoba.ca", 8999),
-                ("hawk.cs.umanitoba.ca", 8999),
-            }
+    """Fetch the blockchain from peers using BlockchainFetcher."""
+    if not self.peers:
+        print("No dynamic peers found. Falling back to well-known peers.")
+        self.peers = {
+            ("goose.cs.umanitoba.ca", 8999),
+            ("eagle.cs.umanitoba.ca", 8999),
+            ("silicon.cs.umanitoba.ca", 8999),
+            ("hawk.cs.umanitoba.ca", 8999),
+        }
 
-        print(f"Available peers for consensus: {self.peers}")
-        if not self.peers:
-            print("Still no peers available for consensus.")
-            return
+    print(f"Available peers for consensus: {self.peers}")
+    if not self.peers:
+        print("Still no peers available for consensus.")
+        return
 
-        # Fetch chains from available peers using BlockchainFetcher
-        longest_chain = None
-        for peer_host, peer_port in self.peers:
-            print(f"Fetching blockchain from {peer_host}:{peer_port}...")
+    # Fetch chains from available peers using BlockchainFetcher
+    longest_chain = None
+    for peer_host, peer_port in self.peers:
+        print(f"Fetching blockchain from {peer_host}:{peer_port}...")
+        fetcher = BlockchainFetcher(peer_host, peer_port)
+        fetched_chain = fetcher.run()
+
+        if fetched_chain is None:
+            print(f"Failed to fetch chain from {peer_host}:{peer_port}.")
+            continue
+
+        # Validate and compare chains
+        fetched_blockchain = Blockchain()
+        fetched_blockchain.chain = fetched_chain
+        if fetched_blockchain.validate_chain():
+            if longest_chain is None or len(fetched_blockchain.chain) > len(longest_chain.chain):
+                longest_chain = fetched_blockchain
+                print(f"New longest valid chain from {peer_host}:{peer_port}.")
+
+    # Replace local chain if a longer valid chain is found
+    if longest_chain and len(longest_chain.chain) > len(self.blockchain.chain):
+        # Check for missing blocks
+        missing_blocks = [
+            i for i in range(len(self.blockchain.chain), len(longest_chain.chain))
+            if i not in [block["height"] for block in longest_chain.chain]
+        ]
+
+        # Retry fetching missing blocks
+        for height in missing_blocks:
+            print(f"Retrying to fetch missing block at height {height}...")
             fetcher = BlockchainFetcher(peer_host, peer_port)
-            fetched_chain = fetcher.run()
+            block = fetcher.send_request("GET_BLOCK", height=height)
+            if block and block.get("type") == "GET_BLOCK_REPLY" and block.get("height") is not None:
+                longest_chain.chain.append(block)
+                print(f"Fetched missing block at height {height}.")
+            else:
+                print(f"Failed to fetch block at height {height} even after retrying.")
 
-            if fetched_chain is None:
-                print(f"Failed to fetch chain from {peer_host}:{peer_port}.")
-                continue
-
-            # Validate and compare chains
-            fetched_blockchain = Blockchain()
-            fetched_blockchain.chain = fetched_chain
-            if fetched_blockchain.validate_chain():
-                if longest_chain is None or len(fetched_blockchain.chain) > len(longest_chain.chain):
-                    longest_chain = fetched_blockchain
-                    print(f"New longest valid chain from {peer_host}:{peer_port}.")
-
-        # Replace local chain if a longer valid chain is found
-        if longest_chain and len(longest_chain.chain) > len(self.blockchain.chain):
+        # Finalize replacing the chain
+        if len(longest_chain.chain) > len(self.blockchain.chain):
             self.blockchain = longest_chain
             print(f"Replaced local chain with fetched chain of height {len(self.blockchain.chain) - 1}.")
         else:
-            print("Consensus completed. No valid longer chain found.")
+            print("Consensus completed. No valid longer chain found after retries.")
+    else:
+        print("Consensus completed. No valid longer chain found.")
+
 
     def listen(self):
         """Listen for incoming UDP messages."""
