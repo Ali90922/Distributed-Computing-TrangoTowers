@@ -1,10 +1,8 @@
 import socket
 import json
 import threading
-import argparse
-import os
-from Blockchain import Blockchain
 from BlockchainFetcher import BlockchainFetcher
+from Blockchain import Blockchain
 
 
 class Peer:
@@ -17,162 +15,108 @@ class Peer:
             ("silicon.cs.umanitoba.ca", 8999),
             ("hawk.cs.umanitoba.ca", 8999),
         }
-
-        # Create or load blockchain
-        self.blockchain = Blockchain()
+        self.blockchain = Blockchain()  # Initialize the blockchain
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
-
-        # Save the blockchain to ensure the file exists
-        self.save_blockchain()
-
-    def save_blockchain(self):
-        """Save the entire blockchain to a JSON file."""
-        try:
-            self.blockchain.save_to_file()
-        except Exception as e:
-            print(f"Error saving blockchain: {e}")
-
-    def send_message(self, message, destination):
-        """Send a JSON-encoded message to the given destination."""
-        try:
-            self.sock.sendto(json.dumps(message).encode(), destination)
-            print(f"Sent {message['type']} to {destination}")
-        except Exception as e:
-            print(f"Failed to send {message['type']} to {destination}: {e}")
+        self.running = True
 
     def perform_consensus(self):
-        """Fetch the blockchain from peers using BlockchainFetcher and save all valid blocks."""
-        if not self.peers:
-            print("No dynamic peers found. Falling back to well-known peers.")
-            self.peers = {
-                ("goose.cs.umanitoba.ca", 8999),
-                ("eagle.cs.umanitoba.ca", 8999),
-                ("silicon.cs.umanitoba.ca", 8999),
-                ("hawk.cs.umanitoba.ca", 8999),
-            }
-
-        print(f"Available peers for consensus: {self.peers}")
-        if not self.peers:
-            print("Still no peers available for consensus.")
-            return
-
-        longest_chain = []
-        for peer_host, peer_port in self.peers:
-            print(f"Fetching blockchain from {peer_host}:{peer_port}...")
-            fetcher = BlockchainFetcher(peer_host, peer_port)
-            fetched_chain = fetcher.run()
-
-            if fetched_chain is None:
-                print(f"Failed to fetch chain from {peer_host}:{peer_port}.")
-                continue
-
-            # Only consider chains longer than the current chain
-            if len(fetched_chain) > len(longest_chain):
-                longest_chain = fetched_chain
-                print(f"Found longer chain with height {len(longest_chain) - 1} from {peer_host}:{peer_port}.")
-
-        # Replace the local chain if a valid longer chain is found
-        if len(longest_chain) > len(self.blockchain.chain):
-            print(f"Replacing local blockchain with fetched chain of height {len(longest_chain) - 1}.")
-            self.blockchain.chain = longest_chain
-            self.save_blockchain()
-        else:
-            print("Consensus completed. Local blockchain is already the longest or no valid longer chain was found.")
+        """
+        Fetch the blockchain from peers using BlockchainFetcher and update local blockchain.
+        """
+        fetcher = BlockchainFetcher(self.blockchain)
+        fetcher.fetch_all_blocks()  # Fetch and update the blockchain
 
     def handle_message(self, message, addr):
-        """Process incoming messages."""
-        if message["type"] == "GOSSIP":
-            self.peers.add((message["host"], message["port"]))
-            return {
-                "type": "GOSSIP_REPLY",
-                "host": self.host,
-                "port": self.port,
-                "name": f"Peer_{self.host}_{self.port}"
-            }
+        """
+        Handle incoming messages based on their type.
+        """
+        msg_type = message.get("type")
 
-        elif message["type"] == "STATS":
-            return self.blockchain.get_stats()
+        if msg_type == "STATS":
+            response = self.blockchain.get_stats()
+            self.send_message(response, addr)
 
-        elif message["type"] == "GET_BLOCK_REPLY":
-            # Save the block to the blockchain file
-            if self.blockchain.add_block(message):
-                self.save_blockchain()
-                print(f"Saved block {message['height']} from {addr}")
-            return {"type": "GET_BLOCK_ACK", "height": message["height"]}
-
-        elif message["type"] == "GET_BLOCK":
+        elif msg_type == "GET_BLOCK":
             height = message.get("height")
-            if 0 <= height < len(self.blockchain.chain):
-                return self.blockchain.chain[height]
-            return {"type": "GET_BLOCK_REPLY", "height": None}
+            if height is not None and 0 <= height < len(self.blockchain.chain):
+                block = self.blockchain.chain[height]
+                response = {
+                    "type": "GET_BLOCK_REPLY",
+                    **block
+                }
+            else:
+                response = {
+                    "type": "GET_BLOCK_REPLY",
+                    "height": None,
+                    "messages": None,
+                    "minedBy": None,
+                    "nonce": None,
+                    "hash": None,
+                    "timestamp": None
+                }
+            self.send_message(response, addr)
 
-        elif message["type"] == "CONSENSUS":
+        elif msg_type == "CONSENSUS":
             self.perform_consensus()
-            return {"type": "CONSENSUS_REPLY", "status": "triggered"}
 
-        return None
+    def send_message(self, message, destination):
+        """
+        Send a JSON-encoded message to the given destination.
+        """
+        try:
+            self.sock.sendto(json.dumps(message).encode(), destination)
+        except Exception as e:
+            print(f"Error sending message to {destination}: {e}")
 
     def listen(self):
-        """Listen for incoming UDP messages."""
-        while True:
+        """
+        Listen for incoming UDP messages.
+        """
+        while self.running:
             try:
                 data, addr = self.sock.recvfrom(4096)
                 message = json.loads(data.decode())
-                print(f"Received {message['type']} from {addr}")
-
-                response = self.handle_message(message, addr)
-                if response:
-                    self.send_message(response, addr)
-
+                self.handle_message(message, addr)
             except Exception as e:
                 print(f"Error handling message: {e}")
 
-    def run(self):
-        """Start the peer."""
-        print(f"Peer started on {self.host}:{self.port}")
+    def start(self):
+        """
+        Start the peer, including the listener thread and consensus process.
+        """
+        # Start listening in a separate thread
         threading.Thread(target=self.listen, daemon=True).start()
+        print(f"Peer started on {self.host}:{self.port}")
 
-        while True:
-            command = input("Enter command (gossip, stats, mine, consensus, exit): ").strip().lower()
-            if command == "gossip":
-                message = {
-                    "type": "GOSSIP",
-                    "host": self.host,
-                    "port": self.port
-                }
-                for peer in self.peers:
-                    self.send_message(message, peer)
+        # Perform initial consensus to synchronize blockchain
+        print("Performing initial consensus...")
+        self.perform_consensus()
+        print("Initial consensus complete.")
 
-            elif command == "stats":
-                print(self.blockchain.get_stats())
-
-            elif command == "mine":
-                miner_name = input("Enter miner name: ")
-                messages = input("Enter messages (comma-separated): ").split(",")
-                block = self.blockchain.mine_block(miner_name, messages)
-                if self.blockchain.add_block(block):
-                    print(f"Mined and added new block: {block}")
-                    self.save_blockchain()
-                else:
-                    print("Failed to add block to blockchain.")
-
-            elif command == "consensus":
-                self.perform_consensus()
-
-            elif command == "exit":
-                print("Shutting down peer...")
-                break
-
-            else:
-                print("Unknown command.")
+    def stop(self):
+        """
+        Stop the peer gracefully.
+        """
+        self.running = False
+        self.sock.close()
+        print("Peer stopped.")
 
 
 if __name__ == "__main__":
+    import argparse
+
     parser = argparse.ArgumentParser(description="Blockchain Peer")
     parser.add_argument("--host", required=True, help="Host for the peer")
     parser.add_argument("--port", type=int, required=True, help="Port for the peer")
     args = parser.parse_args()
 
     peer = Peer(args.host, args.port)
-    peer.run()
+    try:
+        peer.start()
+        while True:
+            command = input("Enter 'stop' to stop the peer: ").strip().lower()
+            if command == "stop":
+                break
+    finally:
+        peer.stop()

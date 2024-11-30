@@ -1,144 +1,116 @@
 import hashlib
-import json
-import os
 import time
+import json
 
 
 class Blockchain:
-    def __init__(self, blockchain_file="blockchain.json"):
-        self.chain = []
-        self.blockchain_file = blockchain_file
+    DIFFICULTY = 8  # Difficulty level for proof-of-work
+    MAX_MESSAGES = 10
+    MAX_MESSAGE_LENGTH = 20
+    MAX_NONCE_LENGTH = 40
 
-        # Load blockchain from file or initialize with genesis block
-        if os.path.exists(self.blockchain_file):
-            self.load_from_file()
-        else:
-            self.chain.append(self.create_genesis_block())
-            self.save_to_file()
+    def __init__(self):
+        self.chain = []
+        self.create_genesis_block()
 
     def create_genesis_block(self):
-        """Create the first block in the chain (genesis block)."""
-        return {
-            "height": 0,
-            "minedBy": "Genesis",
-            "messages": ["Welcome to the Blockchain!"],
-            "nonce": "0",
-            "timestamp": int(time.time()),
-            "hash": "0" * 64,  # A dummy genesis hash
+        """Create the genesis block (the first block of the chain)."""
+        genesis_block = {
+            'height': 0,
+            'messages': ["Genesis Block"],
+            'minedBy': "System",
+            'nonce': "0",
+            'timestamp': int(time.time()),
+            'hash': None,
         }
+        genesis_block['hash'] = self.calculate_hash(genesis_block)
+        self.chain.append(genesis_block)
 
-    def add_block(self, block):
-        """
-        Add a new block to the blockchain.
-        Args:
-            block (dict): A block to add.
-        """
-        self.chain.append(block)
-        print(f"Block {block['height']} added successfully.")
-        self.save_to_file()
+    def calculate_hash(self, block):
+        """Calculate the hash for a block."""
+        hash_base = hashlib.sha256()
+        # Add previous block's hash
+        if block['height'] > 0:
+            last_hash = self.chain[block['height'] - 1]['hash']
+            hash_base.update(last_hash.encode())
+        # Add miner name
+        hash_base.update(block['minedBy'].encode())
+        # Add messages
+        for msg in block['messages']:
+            hash_base.update(msg.encode())
+        # Add timestamp
+        hash_base.update(block['timestamp'].to_bytes(8, 'big'))
+        # Add nonce
+        hash_base.update(block['nonce'].encode())
+        return hash_base.hexdigest()
 
-    def get_block_reply(self, height):
-        """
-        Retrieve a block in the `GET_BLOCK_REPLY` format.
-        Args:
-            height (int): The height of the block to retrieve.
-        Returns:
-            dict: A dictionary in `GET_BLOCK_REPLY` format or an error message if not found.
-        """
-        if 0 <= height < len(self.chain):
-            block = self.chain[height]
-            return {
-                "type": "GET_BLOCK_REPLY",
-                "hash": block["hash"],
-                "height": block["height"],
-                "messages": block["messages"],
-                "minedBy": block["minedBy"],
-                "nonce": block["nonce"],
-                "timestamp": block["timestamp"],
-            }
-        return {"type": "GET_BLOCK_REPLY", "height": None, "error": "Block not found"}
+    def is_valid_block(self, block, prev_block):
+        """Check if a block is valid."""
+        if block['height'] != prev_block['height'] + 1:
+            print(f"Invalid block height: {block['height']} (expected {prev_block['height'] + 1})")
+            return False
+        if prev_block['hash'] != block['hash']:
+            print(f"Previous block hash mismatch: {prev_block['hash']} != {block['hash']}")
+            return False
+        if not block['hash'].endswith('0' * self.DIFFICULTY):
+            print(f"Block hash does not meet difficulty: {block['hash']}")
+            return False
+        if self.calculate_hash(block) != block['hash']:
+            print(f"Hash mismatch: calculated {self.calculate_hash(block)} != {block['hash']}")
+            return False
+        return True
 
-    def validate_chain(self):
-        """
-        Validate the entire blockchain.
-        Returns:
-            bool: True if the chain is valid, False otherwise.
-        """
-        for i in range(1, len(self.chain)):
-            current_block = self.chain[i]
-            previous_block = self.chain[i - 1]
-            if current_block["height"] != i:
-                print(f"Invalid height at block {i}.")
-                return False
-            if current_block.get("previous_hash") != previous_block["hash"]:
-                print(f"Invalid chain at block {i}.")
+    def validate_fetched_chain(self, fetched_chain):
+        """Validate the entire fetched chain."""
+        for i in range(1, len(fetched_chain)):
+            if not self.is_valid_block(fetched_chain[i], fetched_chain[i - 1]):
+                print(f"Fetched chain is invalid at block {i}")
                 return False
         return True
 
-    def save_to_file(self):
-        """Save the blockchain to a JSON file."""
+    def add_block_from_response(self, response):
+        """Add a block to the blockchain from a GET_BLOCK_REPLY response."""
         try:
-            with open(self.blockchain_file, "w") as f:
-                json.dump({"chain": self.chain}, f, indent=4)
-            print(f"Blockchain saved to {self.blockchain_file}.")
-        except Exception as e:
-            print(f"Error saving blockchain: {e}")
+            block = json.loads(response)
+            if block["type"] != "GET_BLOCK_REPLY" or block["height"] is None:
+                raise ValueError("Invalid block data.")
+            
+            if len(self.chain) > 0:
+                prev_block = self.chain[-1]
+                if not self.is_valid_block(block, prev_block):
+                    raise ValueError("Block is invalid or does not match chain.")
+            self.chain.append(block)
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            print(f"Error adding block from response: {e}")
 
-    def load_from_file(self):
-        """Load the blockchain from a JSON file."""
-        try:
-            with open(self.blockchain_file, "r") as f:
-                data = json.load(f)
-                self.chain = data.get("chain", [])
-            print(f"Blockchain loaded from {self.blockchain_file}. Height: {len(self.chain) - 1}")
-        except Exception as e:
-            print(f"Error loading blockchain: {e}")
+    def validate_chain(self):
+        """Validate the entire blockchain."""
+        for i in range(1, len(self.chain)):
+            if not self.is_valid_block(self.chain[i], self.chain[i - 1]):
+                return False
+        return True
+
+    def get_chain(self):
+        """Get the entire blockchain."""
+        return self.chain
 
     def get_stats(self):
-        """
-        Get the current stats of the blockchain.
-        Returns:
-            dict: The height and hash of the last block.
-        """
+        """Get statistics about the blockchain."""
         if not self.chain:
-            return {"height": -1, "hash": None}
-        last_block = self.chain[-1]
-        return {"height": last_block["height"], "hash": last_block["hash"]}
-
-    def __len__(self):
-        """Get the length of the blockchain."""
-        return len(self.chain)
+            return {"height": 0, "hash": None}
+        return {"height": len(self.chain) - 1, "hash": self.chain[-1]['hash']}
 
 
+# Example usage
 if __name__ == "__main__":
-    # Test the Blockchain class
     blockchain = Blockchain()
 
-    # Display current stats
-    print("Blockchain Stats:", blockchain.get_stats())
+    # Simulate adding a block from an HTTP response
+    response = '{"type": "GET_BLOCK_REPLY", "height": 1, "minedBy": "Prof!", "nonce": "4776171179467", "messages": ["test"], "hash": "5c25ae996e712fc8e93c10a1b9fd3b42dd408aaa65f4c3e4dfe8982800000000", "timestamp": 1730974785}'
+    blockchain.add_block_from_response(response)
 
-    # Add a block
-    block = {
-        "hash": "2483cc5c0d2fdbeeba3c942bde825270f345b2e9cd28f22d12ba347300000000",
-        "height": 1,
-        "messages": [
-            "3010 rocks",
-            "Warning:",
-            "Procrastinators",
-            "will be sent back",
-            "in time to start",
-            "early.",
-        ],
-        "minedBy": "Prof!",
-        "nonce": "7965175207940",
-        "timestamp": 1699293749,
-    }
-    blockchain.add_block(block)
+    # Print chain
+    print(json.dumps(blockchain.get_chain(), indent=4))
 
-    # Fetch block reply
-    response = blockchain.get_block_reply(1)
-    print("GET_BLOCK_REPLY:", response)
-
-    # Validate the blockchain
-    is_valid = blockchain.validate_chain()
-    print(f"Blockchain is valid: {is_valid}")
+    # Check stats
+    print(blockchain.get_stats())
