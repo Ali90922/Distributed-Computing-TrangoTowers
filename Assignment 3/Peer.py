@@ -15,14 +15,50 @@ class Peer:
         self.sock.bind((self.host, self.port))
         self.running = True
 
-    def perform_consensus(self):
+    def get_peer_stats(self):
         """
-        Fetch the blockchain from a single well-known peer using BlockchainFetcher and update local blockchain.
+        Get blockchain stats from the well-known peer.
         """
         peer_host, peer_port = self.well_known_peer
-        print(f"Fetching blockchain from {peer_host}:{peer_port}...")
+        message = {"type": "STATS"}
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.settimeout(5)
+            sock.sendto(json.dumps(message).encode(), (peer_host, peer_port))
+            response, _ = sock.recvfrom(4096)
+            stats = json.loads(response.decode())
+            return stats
+        except socket.timeout:
+            print(f"Timeout fetching stats from {peer_host}:{peer_port}.")
+            return None
+        except Exception as e:
+            print(f"Error fetching stats: {e}")
+            return None
+        finally:
+            sock.close()
+
+    def perform_consensus(self):
+        """
+        Fetch the blockchain from a single well-known peer and replace the local blockchain
+        only if the peer's chain is longer.
+        """
+        peer_stats = self.get_peer_stats()
+        if not peer_stats:
+            print("Failed to fetch stats from peer. Skipping consensus.")
+            return
+
+        peer_height = peer_stats.get("height")
+        if peer_height is None or peer_height <= len(self.blockchain.chain) - 1:
+            print("Local blockchain is already up to date or peer's chain is invalid.")
+            return
+
+        print(f"Peer has a longer chain (height {peer_height}). Fetching their blockchain...")
+        peer_host, peer_port = self.well_known_peer
         fetcher = BlockchainFetcher(self.blockchain)
-        fetcher.fetch_all_blocks(peer_host, peer_port)  # Fetch and update the blockchain
+
+        # Clear local chain and fetch the new one
+        self.blockchain.chain = []
+        fetcher.fetch_all_blocks(peer_host, peer_port)
         print(f"Consensus complete with blockchain height: {len(self.blockchain.chain) - 1}")
 
     def handle_message(self, message, addr):
