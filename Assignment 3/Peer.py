@@ -9,17 +9,22 @@ class Peer:
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.well_known_peer = ("goose.cs.umanitoba.ca", 8999)  # Fetch from a single well-known peer
+        self.well_known_peers = [
+            ("silicon.cs.umanitoba.ca", 8999),
+            ("eagle.cs.umanitoba.ca", 8999),
+            ("goose.cs.umanitoba.ca", 8999),
+            ("hawk.cs.umanitoba.ca", 8999),
+            ("goose.cs.umanitoba.ca", 8997),
+        ]
         self.blockchain = Blockchain()  # Initialize the blockchain
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
         self.running = True
 
-    def get_peer_stats(self):
+    def get_peer_stats(self, peer_host, peer_port):
         """
-        Get blockchain stats from the well-known peer.
+        Get blockchain stats from a peer.
         """
-        peer_host, peer_port = self.well_known_peer
         message = {"type": "STATS"}
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -32,33 +37,47 @@ class Peer:
             print(f"Timeout fetching stats from {peer_host}:{peer_port}.")
             return None
         except Exception as e:
-            print(f"Error fetching stats: {e}")
+            print(f"Error fetching stats from {peer_host}:{peer_port}: {e}")
             return None
         finally:
             sock.close()
 
     def perform_consensus(self):
         """
-        Fetch the blockchain from a single well-known peer and replace the local blockchain
-        only if the peer's chain is longer.
+        Perform consensus by fetching blockchain stats from well-known peers,
+        and replacing the local blockchain if a longer valid chain is found.
         """
-        peer_stats = self.get_peer_stats()
-        if not peer_stats:
-            print("Failed to fetch stats from peer. Skipping consensus.")
+        longest_chain_stats = None
+        longest_chain_peer = None
+
+        # Fetch stats from all well-known peers
+        for peer_host, peer_port in self.well_known_peers:
+            print(f"Fetching stats from {peer_host}:{peer_port}...")
+            peer_stats = self.get_peer_stats(peer_host, peer_port)
+            if not peer_stats:
+                continue
+
+            peer_height = peer_stats.get("height")
+            if peer_height is not None:
+                if not longest_chain_stats or peer_height > longest_chain_stats["height"]:
+                    longest_chain_stats = peer_stats
+                    longest_chain_peer = (peer_host, peer_port)
+
+        # Check if a longer chain exists
+        if not longest_chain_stats:
+            print("Failed to find any valid peers with longer chains. Skipping consensus.")
             return
 
-        peer_height = peer_stats.get("height")
-        if peer_height is None or peer_height <= len(self.blockchain.chain) - 1:
-            print("Local blockchain is already up to date or peer's chain is invalid.")
+        if longest_chain_stats["height"] <= len(self.blockchain.chain) - 1:
+            print("Local blockchain is already up to date or matches the longest chain.")
             return
 
-        print(f"Peer has a longer chain (height {peer_height}). Fetching their blockchain...")
-        peer_host, peer_port = self.well_known_peer
-        fetcher = BlockchainFetcher(self.blockchain)
+        print(f"Peer {longest_chain_peer[0]}:{longest_chain_peer[1]} has the longest chain (height {longest_chain_stats['height']}). Fetching their blockchain...")
 
-        # Clear local chain and fetch the new one
+        # Clear local chain and fetch the longer one
         self.blockchain.chain = []
-        fetcher.fetch_all_blocks(peer_host, peer_port)
+        fetcher = BlockchainFetcher(self.blockchain)
+        fetcher.fetch_all_blocks(*longest_chain_peer)
         print(f"Consensus complete with blockchain height: {len(self.blockchain.chain) - 1}")
 
     def handle_message(self, message, addr):
