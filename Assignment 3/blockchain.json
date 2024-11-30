@@ -1,0 +1,12 @@
+{
+    "chain": [
+        {
+            "height": 0,
+            "minedBy": "Genesis",
+            "messages": [],
+            "nonce": "0",
+            "timestamp": 1732935166,
+            "hash": "0000"
+        }
+    ]
+}
