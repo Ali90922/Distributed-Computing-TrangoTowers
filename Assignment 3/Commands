@@ -1,0 +1,5 @@
+[nawaza1@eagle ~]> echo '{"type":"GET_BLOCK", "height":4}' | nc -u goose.cs.umanitoba.ca 8999
+{"type": "GET_BLOCK_REPLY", "height": 4, "minedBy": "Prof!", "nonce": "9180556384442", "messages": ["boxers", "hosed", "conjugations", "adagio's", "uncomplimentary"], "hash": "b78a93871f45ce84b8174941c23ae87c45b0465eb05ea8f6b7172d6600000000", "timestamp": 1731024600}^[[A^[[A^[[B^[[B^[[B^C
+[nawaza1@eagle ~]> echo '{"type":"GET_BLOCK", "height":1}' | nc -u goose.cs.umanitoba.ca 8999
+{"type": "GET_BLOCK_REPLY", "height": 1, "minedBy": "Prof!", "nonce": "4776171179467", "messages": ["test"], "hash": "5c25ae996e712fc8e93c10a1b9fd3b42dd408aaa65f4c3e4dfe8982800000000", "timestamp": 1730974785}ls
+^C
