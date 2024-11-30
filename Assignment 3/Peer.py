@@ -30,7 +30,7 @@ class Peer:
         """Save the blockchain to a JSON file."""
         try:
             with open(self.BLOCKCHAIN_FILE, "w") as f:
-                json.dump(self.blockchain.chain, f, indent=4)
+                json.dump({"chain": self.blockchain.chain}, f, indent=4)
             print(f"Blockchain saved to {self.BLOCKCHAIN_FILE}.")
         except Exception as e:
             print(f"Error saving blockchain: {e}")
@@ -49,14 +49,10 @@ class Peer:
             print("No existing blockchain file found. Starting fresh.")
 
     def save_block_to_file(self, block):
-        """Append a received block to the blockchain file."""
+        """Save a single block to the blockchain file."""
         try:
-            # Append the block to the chain in memory
-            self.blockchain.add_block(block)
-
-            # Save the updated chain to the file
-            with open(self.BLOCKCHAIN_FILE, "w") as f:
-                json.dump(self.blockchain.chain, f, indent=4)
+            self.blockchain.add_block(block)  # Add the block to the local chain in memory
+            self.save_blockchain()  # Save the updated chain to the file
             print(f"Block {block['height']} saved to {self.BLOCKCHAIN_FILE}.")
         except Exception as e:
             print(f"Error saving block to file: {e}")
@@ -68,6 +64,41 @@ class Peer:
             print(f"Sent {message['type']} to {destination}")
         except Exception as e:
             print(f"Failed to send {message['type']} to {destination}: {e}")
+
+    def perform_consensus(self):
+        """Fetch the blockchain from peers using BlockchainFetcher and save all blocks."""
+        if not self.peers:
+            print("No dynamic peers found. Falling back to well-known peers.")
+            self.peers = {
+                ("goose.cs.umanitoba.ca", 8999),
+                ("eagle.cs.umanitoba.ca", 8999),
+                ("silicon.cs.umanitoba.ca", 8999),
+                ("hawk.cs.umanitoba.ca", 8999),
+            }
+
+        print(f"Available peers for consensus: {self.peers}")
+        if not self.peers:
+            print("Still no peers available for consensus.")
+            return
+
+        for peer_host, peer_port in self.peers:
+            print(f"Fetching blockchain from {peer_host}:{peer_port}...")
+            fetcher = BlockchainFetcher(peer_host, peer_port)
+            fetched_chain = fetcher.run()
+
+            if fetched_chain is None:
+                print(f"Failed to fetch chain from {peer_host}:{peer_port}.")
+                continue
+
+            for block in fetched_chain:
+                if block["height"] >= len(self.blockchain.chain):
+                    if self.blockchain.add_block(block):
+                        self.save_block_to_file(block)  # Save each block as it's added
+                        print(f"Added and saved block {block['height']}")
+                    else:
+                        print(f"Block {block['height']} is invalid and was not added.")
+
+        print("Consensus completed. Local blockchain updated.")
 
     def handle_message(self, message, addr):
         """Process incoming messages."""
@@ -99,46 +130,6 @@ class Peer:
             return {"type": "CONSENSUS_REPLY", "status": "triggered"}
 
         return None
-
-    def perform_consensus(self):
-        """Fetch the blockchain from peers using BlockchainFetcher."""
-        if not self.peers:
-            print("No dynamic peers found. Falling back to well-known peers.")
-            self.peers = {
-                ("goose.cs.umanitoba.ca", 8999),
-                ("eagle.cs.umanitoba.ca", 8999),
-                ("silicon.cs.umanitoba.ca", 8999),
-                ("hawk.cs.umanitoba.ca", 8999),
-            }
-
-        print(f"Available peers for consensus: {self.peers}")
-        if not self.peers:
-            print("Still no peers available for consensus.")
-            return
-
-        longest_chain = None
-        for peer_host, peer_port in self.peers:
-            print(f"Fetching blockchain from {peer_host}:{peer_port}...")
-            fetcher = BlockchainFetcher(peer_host, peer_port)
-            fetched_chain = fetcher.run()
-
-            if fetched_chain is None:
-                print(f"Failed to fetch chain from {peer_host}:{peer_port}.")
-                continue
-
-            fetched_blockchain = Blockchain()
-            fetched_blockchain.chain = fetched_chain
-            if fetched_blockchain.validate_chain():
-                if longest_chain is None or len(fetched_blockchain.chain) > len(longest_chain.chain):
-                    longest_chain = fetched_blockchain
-                    print(f"New longest valid chain from {peer_host}:{peer_port}.")
-
-        if longest_chain and len(longest_chain.chain) > len(self.blockchain.chain):
-            self.blockchain = longest_chain
-            print(f"Replaced local chain with fetched chain of height {len(self.blockchain.chain) - 1}.")
-            self.save_blockchain()
-        else:
-            print("Consensus completed. No valid longer chain found.")
 
     def listen(self):
         """Listen for incoming UDP messages."""
