@@ -8,7 +8,7 @@ from BlockchainFetcher import BlockchainFetcher
 
 
 class Peer:
-    BLOCKCHAIN_FILE = "blockchain.json"  # File to store the blockchain
+    BLOCKCHAIN_FILE = "blockchain.json"
 
     def __init__(self, host, port):
         self.host = host
@@ -18,12 +18,12 @@ class Peer:
             ("eagle.cs.umanitoba.ca", 8999),
             ("silicon.cs.umanitoba.ca", 8999),
             ("hawk.cs.umanitoba.ca", 8999),
-        }  # Well-known peers
+        }
         self.blockchain = Blockchain()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
 
-        # Load the blockchain from file
+        # Load blockchain from file
         self.load_blockchain()
 
     def save_blockchain(self):
@@ -46,7 +46,7 @@ class Peer:
             except Exception as e:
                 print(f"Error loading blockchain: {e}")
         else:
-            print(f"No existing blockchain file found. Starting fresh.")
+            print("No existing blockchain file found. Starting fresh.")
 
     def send_message(self, message, destination):
         """Send a JSON-encoded message to the given destination."""
@@ -80,10 +80,6 @@ class Peer:
             self.perform_consensus()
             return {"type": "CONSENSUS_REPLY", "status": "triggered"}
 
-        elif message["type"] == "NEW_WORD":
-            print(f"Received new word: {message.get('word')}")
-            return None
-
         return None
 
     def perform_consensus(self):
@@ -102,7 +98,6 @@ class Peer:
             print("Still no peers available for consensus.")
             return
 
-        # Fetch chains from available peers using BlockchainFetcher
         longest_chain = None
         for peer_host, peer_port in self.peers:
             print(f"Fetching blockchain from {peer_host}:{peer_port}...")
@@ -113,7 +108,6 @@ class Peer:
                 print(f"Failed to fetch chain from {peer_host}:{peer_port}.")
                 continue
 
-            # Validate and compare chains
             fetched_blockchain = Blockchain()
             fetched_blockchain.chain = fetched_chain
             if fetched_blockchain.validate_chain():
@@ -121,11 +115,10 @@ class Peer:
                     longest_chain = fetched_blockchain
                     print(f"New longest valid chain from {peer_host}:{peer_port}.")
 
-        # Replace local chain if a longer valid chain is found
         if longest_chain and len(longest_chain.chain) > len(self.blockchain.chain):
             self.blockchain = longest_chain
             print(f"Replaced local chain with fetched chain of height {len(self.blockchain.chain) - 1}.")
-            self.save_blockchain()  # Save updated blockchain
+            self.save_blockchain()
         else:
             print("Consensus completed. No valid longer chain found.")
 
@@ -137,7 +130,6 @@ class Peer:
                 message = json.loads(data.decode())
                 print(f"Received {message['type']} from {addr}")
 
-                # Handle the message
                 response = self.handle_message(message, addr)
                 if response:
                     self.send_message(response, addr)
@@ -170,7 +162,7 @@ class Peer:
                 block = self.blockchain.mine_block(miner_name, messages)
                 self.blockchain.add_block(block)
                 print(f"Mined new block: {block}")
-                self.save_blockchain()  # Save updated blockchain
+                self.save_blockchain()
 
             elif command == "consensus":
                 self.perform_consensus()
