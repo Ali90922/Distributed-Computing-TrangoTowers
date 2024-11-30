@@ -31,7 +31,7 @@ class Peer:
         try:
             with open(self.BLOCKCHAIN_FILE, "w") as f:
                 json.dump(self.blockchain.chain, f, indent=4)
-            print("Blockchain saved to file.")
+            print(f"Blockchain saved to {self.BLOCKCHAIN_FILE}.")
         except Exception as e:
             print(f"Error saving blockchain: {e}")
 
