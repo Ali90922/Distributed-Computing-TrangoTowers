@@ -8,8 +8,6 @@ from BlockchainFetcher import BlockchainFetcher
 
 
 class Peer:
-    BLOCKCHAIN_FILE = "blockchain.json"
-
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -19,34 +17,21 @@ class Peer:
             ("silicon.cs.umanitoba.ca", 8999),
             ("hawk.cs.umanitoba.ca", 8999),
         }
+
+        # Create or load blockchain
         self.blockchain = Blockchain()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
 
-        # Load blockchain from file
-        self.load_blockchain()
+        # Ensure the blockchain is saved at least once
+        self.save_blockchain()
 
     def save_blockchain(self):
         """Save the blockchain to a JSON file."""
         try:
-            with open(self.BLOCKCHAIN_FILE, "w") as f:
-                json.dump({"chain": self.blockchain.chain}, f, indent=4)
-            print(f"Blockchain saved to {os.path.abspath(self.BLOCKCHAIN_FILE)}.")
+            self.blockchain.save_to_file()
         except Exception as e:
             print(f"Error saving blockchain: {e}")
-
-    def load_blockchain(self):
-        """Load the blockchain from a JSON file."""
-        if os.path.exists(self.BLOCKCHAIN_FILE):
-            try:
-                with open(self.BLOCKCHAIN_FILE, "r") as f:
-                    data = json.load(f)
-                    self.blockchain.chain = data.get("chain", [])
-                print(f"Blockchain loaded from {self.BLOCKCHAIN_FILE}, height={len(self.blockchain.chain) - 1}.")
-            except Exception as e:
-                print(f"Error loading blockchain: {e}")
-        else:
-            print("No existing blockchain file found. Starting fresh.")
 
     def send_message(self, message, destination):
         """Send a JSON-encoded message to the given destination."""
@@ -98,6 +83,7 @@ class Peer:
             self.save_blockchain()  # Save the new blockchain to a file
         else:
             print("Consensus completed. Local chain is already the longest or no valid longer chain was found.")
+            self.save_blockchain()  # Save the new blockchain to a file
 
     def handle_message(self, message, addr):
         """Process incoming messages."""
