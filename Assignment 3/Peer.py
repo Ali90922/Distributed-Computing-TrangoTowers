@@ -27,21 +27,21 @@ class Peer:
         self.load_blockchain()
 
     def save_blockchain(self):
-        """Save the blockchain to a file."""
+        """Save the blockchain to a JSON file."""
         try:
             with open(self.BLOCKCHAIN_FILE, "w") as f:
-                json.dump(self.blockchain.chain, f, indent=4)
+                json.dump({"chain": self.blockchain.chain}, f, indent=4)
             print(f"Blockchain saved to {self.BLOCKCHAIN_FILE}.")
         except Exception as e:
             print(f"Error saving blockchain: {e}")
 
     def load_blockchain(self):
-        """Load the blockchain from a file."""
+        """Load the blockchain from a JSON file."""
         if os.path.exists(self.BLOCKCHAIN_FILE):
             try:
                 with open(self.BLOCKCHAIN_FILE, "r") as f:
-                    chain_data = json.load(f)
-                self.blockchain.chain = chain_data
+                    data = json.load(f)
+                    self.blockchain.chain = data.get("chain", [])
                 print(f"Blockchain loaded from {self.BLOCKCHAIN_FILE}, height={len(self.blockchain.chain) - 1}.")
             except Exception as e:
                 print(f"Error loading blockchain: {e}")
@@ -160,9 +160,11 @@ class Peer:
                 miner_name = input("Enter miner name: ")
                 messages = input("Enter messages (comma-separated): ").split(",")
                 block = self.blockchain.mine_block(miner_name, messages)
-                self.blockchain.add_block(block)
-                print(f"Mined new block: {block}")
-                self.save_blockchain()
+                if self.blockchain.add_block(block):
+                    print(f"Mined and added new block: {block}")
+                    self.save_blockchain()
+                else:
+                    print("Failed to add block to blockchain.")
 
             elif command == "consensus":
                 self.perform_consensus()
