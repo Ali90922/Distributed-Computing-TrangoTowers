@@ -52,6 +52,11 @@ class Peer:
             self.perform_consensus()
             return {"type": "CONSENSUS_REPLY", "status": "triggered"}
 
+        elif message["type"] == "NEW_WORD":
+            # For bonus: Handle new words
+            print(f"Received new word: {message.get('word')}")
+            return None
+
         return None
 
     def perform_consensus(self):
@@ -91,29 +96,8 @@ class Peer:
 
         # Replace local chain if a longer valid chain is found
         if longest_chain and len(longest_chain.chain) > len(self.blockchain.chain):
-            # Check for missing blocks
-            missing_blocks = [
-                i for i in range(len(self.blockchain.chain), len(longest_chain.chain))
-                if i not in [block["height"] for block in longest_chain.chain]
-            ]
-
-            # Retry fetching missing blocks
-            for height in missing_blocks:
-                print(f"Retrying to fetch missing block at height {height}...")
-                fetcher = BlockchainFetcher(peer_host, peer_port)
-                block = fetcher.send_request("GET_BLOCK", height=height)
-                if block and block.get("type") == "GET_BLOCK_REPLY" and block.get("height") is not None:
-                    longest_chain.chain.append(block)
-                    print(f"Fetched missing block at height {height}.")
-                else:
-                    print(f"Failed to fetch block at height {height} even after retrying.")
-
-            # Finalize replacing the chain
-            if len(longest_chain.chain) > len(self.blockchain.chain):
-                self.blockchain = longest_chain
-                print(f"Replaced local chain with fetched chain of height {len(self.blockchain.chain) - 1}.")
-            else:
-                print("Consensus completed. No valid longer chain found after retries.")
+            self.blockchain = longest_chain
+            print(f"Replaced local chain with fetched chain of height {len(self.blockchain.chain) - 1}.")
         else:
             print("Consensus completed. No valid longer chain found.")
 
