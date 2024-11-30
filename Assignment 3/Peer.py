@@ -30,7 +30,7 @@ class Peer:
         """Save the blockchain to a JSON file."""
         try:
             with open(self.BLOCKCHAIN_FILE, "w") as f:
-                json.dump({"chain": self.blockchain.chain}, f, indent=4)
+                json.dump(self.blockchain.chain, f, indent=4)
             print(f"Blockchain saved to {self.BLOCKCHAIN_FILE}.")
         except Exception as e:
             print(f"Error saving blockchain: {e}")
@@ -47,6 +47,19 @@ class Peer:
                 print(f"Error loading blockchain: {e}")
         else:
             print("No existing blockchain file found. Starting fresh.")
+
+    def save_block_to_file(self, block):
+        """Append a received block to the blockchain file."""
+        try:
+            # Append the block to the chain in memory
+            self.blockchain.add_block(block)
+
+            # Save the updated chain to the file
+            with open(self.BLOCKCHAIN_FILE, "w") as f:
+                json.dump(self.blockchain.chain, f, indent=4)
+            print(f"Block {block['height']} saved to {self.BLOCKCHAIN_FILE}.")
+        except Exception as e:
+            print(f"Error saving block to file: {e}")
 
     def send_message(self, message, destination):
         """Send a JSON-encoded message to the given destination."""
@@ -69,6 +82,11 @@ class Peer:
 
         elif message["type"] == "STATS":
             return self.blockchain.get_stats()
+
+        elif message["type"] == "GET_BLOCK_REPLY":
+            # Save the block to the blockchain file
+            self.save_block_to_file(message)
+            return {"type": "GET_BLOCK_ACK", "height": message["height"]}
 
         elif message["type"] == "GET_BLOCK":
             height = message.get("height")
