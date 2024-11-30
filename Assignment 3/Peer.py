@@ -1,11 +1,16 @@
 import socket
 import json
 import threading
+import time
+import uuid
 from BlockchainFetcher import BlockchainFetcher
 from Blockchain import Blockchain
 
 
 class Peer:
+    GOSSIP_INTERVAL = 30  # Re-GOSSIP every 30 seconds
+    MAX_PEERS_TO_GOSSIP = 3  # Repeat GOSSIP to 3 tracked peers
+
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -16,10 +21,73 @@ class Peer:
             ("hawk.cs.umanitoba.ca", 8999),
             ("goose.cs.umanitoba.ca", 8997),
         ]
+        self.tracked_peers = set()  # Dynamically track peers
         self.blockchain = Blockchain()  # Initialize the blockchain
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
         self.running = True
+        self.gossip_seen = set()  # Keep track of seen GOSSIP IDs
+
+        self.name = "Max Verstappen"  # Your name
+
+    def send_gossip(self):
+        """
+        Send a GOSSIP message to well-known peers and tracked peers.
+        """
+        message_id = str(uuid.uuid4())
+        gossip_message = {
+            "type": "GOSSIP",
+            "host": self.host,
+            "port": self.port,
+            "id": message_id,
+            "name": self.name,
+        }
+        print(f"Sending GOSSIP with ID {message_id}...")
+
+        # Send GOSSIP to well-known peers
+        for peer in self.well_known_peers:
+            self.send_message(gossip_message, peer)
+
+        # Forward GOSSIP to tracked peers
+        tracked_peers_to_gossip = list(self.tracked_peers)[:self.MAX_PEERS_TO_GOSSIP]
+        for peer in tracked_peers_to_gossip:
+            self.send_message(gossip_message, peer)
+
+    def handle_gossip(self, message, addr):
+        """
+        Handle incoming GOSSIP messages.
+        """
+        gossip_id = message.get("id")
+        if gossip_id in self.gossip_seen:
+            print(f"Ignoring duplicate GOSSIP with ID {gossip_id}")
+            return
+
+        print(f"Received GOSSIP with ID {gossip_id} from {addr}")
+        self.gossip_seen.add(gossip_id)
+        self.tracked_peers.add((message["host"], message["port"]))
+
+        # Reply to the sender with GOSSIP-REPLY
+        gossip_reply = {
+            "type": "GOSSIP_REPLY",
+            "host": self.host,
+            "port": self.port,
+            "name": self.name,
+        }
+        self.send_message(gossip_reply, addr)
+
+        # Forward the GOSSIP to 3 tracked peers
+        tracked_peers_to_gossip = list(self.tracked_peers)[:self.MAX_PEERS_TO_GOSSIP]
+        for peer in tracked_peers_to_gossip:
+            if peer != addr:  # Avoid forwarding back to the originator
+                self.send_message(message, peer)
+
+    def periodic_gossip(self):
+        """
+        Periodically send GOSSIP messages.
+        """
+        while self.running:
+            self.send_gossip()
+            time.sleep(self.GOSSIP_INTERVAL)
 
     def get_peer_stats(self, peer_host, peer_port):
         """
@@ -117,6 +185,9 @@ class Peer:
             print("Performing consensus triggered by external request.")
             self.perform_consensus()
 
+        elif msg_type == "GOSSIP":
+            self.handle_gossip(message, addr)
+
     def send_message(self, message, destination):
         """
         Send a JSON-encoded message to the given destination.
@@ -145,6 +216,9 @@ class Peer:
         # Start listening in a separate thread
         threading.Thread(target=self.listen, daemon=True).start()
         print(f"Peer started on {self.host}:{self.port}")
+
+        # Start periodic gossiping in a separate thread
+        threading.Thread(target=self.periodic_gossip, daemon=True).start()
 
         # Perform initial consensus to synchronize blockchain
         print("Performing initial consensus...")
