@@ -31,7 +31,7 @@ class Peer:
         try:
             with open(self.BLOCKCHAIN_FILE, "w") as f:
                 json.dump({"chain": self.blockchain.chain}, f, indent=4)
-            print(f"Blockchain saved to {self.BLOCKCHAIN_FILE}.")
+            print(f"Blockchain saved to {os.path.abspath(self.BLOCKCHAIN_FILE)}.")
         except Exception as e:
             print(f"Error saving blockchain: {e}")
 
@@ -48,15 +48,6 @@ class Peer:
         else:
             print("No existing blockchain file found. Starting fresh.")
 
-    def save_block_to_file(self, block):
-        """Save a single block to the blockchain file."""
-        try:
-            self.blockchain.add_block(block)  # Add the block to the local chain in memory
-            self.save_blockchain()  # Save the updated chain to the file
-            print(f"Block {block['height']} saved to {self.BLOCKCHAIN_FILE}.")
-        except Exception as e:
-            print(f"Error saving block to file: {e}")
-
     def send_message(self, message, destination):
         """Send a JSON-encoded message to the given destination."""
         try:
@@ -66,7 +57,7 @@ class Peer:
             print(f"Failed to send {message['type']} to {destination}: {e}")
 
     def perform_consensus(self):
-        """Fetch the blockchain from peers using BlockchainFetcher and save all blocks."""
+        """Fetch the blockchain from peers using BlockchainFetcher and save all valid blocks."""
         if not self.peers:
             print("No dynamic peers found. Falling back to well-known peers.")
             self.peers = {
@@ -81,6 +72,9 @@ class Peer:
             print("Still no peers available for consensus.")
             return
 
+        # Create a new blockchain object to store the fetched chain
+        fetched_blockchain = Blockchain()
+
         for peer_host, peer_port in self.peers:
             print(f"Fetching blockchain from {peer_host}:{peer_port}...")
             fetcher = BlockchainFetcher(peer_host, peer_port)
@@ -91,14 +85,19 @@ class Peer:
                 continue
 
             for block in fetched_chain:
-                if block["height"] >= len(self.blockchain.chain):
-                    if self.blockchain.add_block(block):
-                        self.save_block_to_file(block)  # Save each block as it's added
-                        print(f"Added and saved block {block['height']}")
-                    else:
-                        print(f"Block {block['height']} is invalid and was not added.")
+                # Add each block to the fetched blockchain object
+                if fetched_blockchain.add_block(block):
+                    print(f"Added block {block['height']} to fetched blockchain.")
+                else:
+                    print(f"Block {block['height']} is invalid and was skipped.")
 
-        print("Consensus completed. Local blockchain updated.")
+        # Compare fetched blockchain with local blockchain
+        if len(fetched_blockchain.chain) > len(self.blockchain.chain):
+            print(f"Replacing local chain with fetched chain of height {len(fetched_blockchain.chain) - 1}.")
+            self.blockchain = fetched_blockchain  # Replace the local chain
+            self.save_blockchain()  # Save the new blockchain to a file
+        else:
+            print("Consensus completed. Local chain is already the longest or no valid longer chain was found.")
 
     def handle_message(self, message, addr):
         """Process incoming messages."""
@@ -116,7 +115,9 @@ class Peer:
 
         elif message["type"] == "GET_BLOCK_REPLY":
             # Save the block to the blockchain file
-            self.save_block_to_file(message)
+            if self.blockchain.add_block(message):
+                self.save_blockchain()
+                print(f"Saved block {message['height']} from {addr}")
             return {"type": "GET_BLOCK_ACK", "height": message["height"]}
 
         elif message["type"] == "GET_BLOCK":
