@@ -82,7 +82,9 @@ class Peer:
             self.blockchain = fetched_blockchain  # Replace the local chain
             self.save_blockchain()  # Save the new blockchain to a file
         else:
-            print("Consensus completed. Local chain is already the longest or no valid longer chain was found.")
+            print("Nananana")
+            self.blockchain = fetched_blockchain  # Replace the local chain
+
             self.save_blockchain()  # Save the new blockchain to a file
 
     def handle_message(self, message, addr):
