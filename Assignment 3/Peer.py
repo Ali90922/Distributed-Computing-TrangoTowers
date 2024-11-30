@@ -156,7 +156,12 @@ class Peer:
 
         if msg_type == "STATS":
             # Respond with local blockchain stats
-            response = self.blockchain.get_stats()
+            response = {
+                "type": "STATS_REPLY",
+                "height": len(self.blockchain.chain) - 1,
+                "hash": self.blockchain.chain[-1]["hash"] if self.blockchain.chain else None,
+            }
+            print(f"Sending STATS_REPLY: {response}")
             self.send_message(response, addr)
 
         elif msg_type == "GET_BLOCK":
