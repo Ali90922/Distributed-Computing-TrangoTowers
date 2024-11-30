@@ -23,11 +23,11 @@ class Peer:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
 
-        # Ensure the blockchain is saved at least once
+        # Save the blockchain to ensure the file exists
         self.save_blockchain()
 
     def save_blockchain(self):
-        """Save the blockchain to a JSON file."""
+        """Save the entire blockchain to a JSON file."""
         try:
             self.blockchain.save_to_file()
         except Exception as e:
@@ -57,9 +57,7 @@ class Peer:
             print("Still no peers available for consensus.")
             return
 
-        # Create a new blockchain object to store the fetched chain
-        fetched_blockchain = Blockchain()
-
+        longest_chain = []
         for peer_host, peer_port in self.peers:
             print(f"Fetching blockchain from {peer_host}:{peer_port}...")
             fetcher = BlockchainFetcher(peer_host, peer_port)
@@ -69,23 +67,18 @@ class Peer:
                 print(f"Failed to fetch chain from {peer_host}:{peer_port}.")
                 continue
 
-            for block in fetched_chain:
-                # Add each block to the fetched blockchain object
-                if fetched_blockchain.add_block(block):
-                    print(f"Added block {block['height']} to fetched blockchain.")
-                else:
-                    print(f"Block {block['height']} is invalid and was skipped.")
+            # Only consider chains longer than the current chain
+            if len(fetched_chain) > len(longest_chain):
+                longest_chain = fetched_chain
+                print(f"Found longer chain with height {len(longest_chain) - 1} from {peer_host}:{peer_port}.")
 
-        # Compare fetched blockchain with local blockchain
-        if len(fetched_blockchain.chain) > len(self.blockchain.chain):
-            print(f"Replacing local chain with fetched chain of height {len(fetched_blockchain.chain) - 1}.")
-            self.blockchain = fetched_blockchain  # Replace the local chain
-            self.save_blockchain()  # Save the new blockchain to a file
+        # Replace the local chain if a valid longer chain is found
+        if len(longest_chain) > len(self.blockchain.chain):
+            print(f"Replacing local blockchain with fetched chain of height {len(longest_chain) - 1}.")
+            self.blockchain.chain = longest_chain
+            self.save_blockchain()
         else:
-            print("Nananana")
-            self.blockchain = fetched_blockchain  # Replace the local chain
-
-            self.save_blockchain()  # Save the new blockchain to a file
+            print("Consensus completed. Local blockchain is already the longest or no valid longer chain was found.")
 
     def handle_message(self, message, addr):
         """Process incoming messages."""
