@@ -30,10 +30,85 @@ class Peer:
 
         self.name = "Max Verstappen"  # Your name
 
+    # -------------------- Mining Methods --------------------
+
+    def create_new_block(self, messages, miner_name):
+        """Create a new block with messages and miner's name."""
+        if len(messages) > self.blockchain.MAX_MESSAGES:
+            raise ValueError("Too many messages. Maximum is {}".format(self.blockchain.MAX_MESSAGES))
+        for msg in messages:
+            if len(msg) > self.blockchain.MAX_MESSAGE_LENGTH:
+                raise ValueError("Message exceeds maximum length of 20 characters.")
+
+        new_block = {
+            'type': 'GET_BLOCK_REPLY',
+            'height': len(self.blockchain.chain),
+            'messages': messages,
+            'minedBy': miner_name,
+            'nonce': '',  # To be determined during mining
+            'timestamp': int(time.time()),
+            'hash': ''  # To be determined during mining
+        }
+        return new_block
+
+    def mine_block(self, block):
+        """Mine the block to meet the difficulty requirement."""
+        print(f"Mining block with height {block['height']}...")
+        nonce = 0
+        while True:
+            block['nonce'] = str(nonce)
+            block['hash'] = self.blockchain.calculate_hash(block)
+            if block['hash'].endswith('0' * self.blockchain.DIFFICULTY):
+                print(f"Block mined! Nonce: {block['nonce']}, Hash: {block['hash']}")
+                return block
+            nonce += 1
+            if nonce % 100000 == 0:
+                print(f"Still mining... Current nonce: {nonce}")
+
+    def add_block(self, block):
+        """Add a mined block to the blockchain."""
+        if self.blockchain.is_valid_block(block, self.blockchain.chain[-1]):
+            self.blockchain.chain.append(block)
+            print(f"Block added to the blockchain! Height: {block['height']}, Hash: {block['hash']}")
+            self.announce_block(block)
+        else:
+            print("Mined block is invalid and was not added.")
+
+    def announce_block(self, block):
+        """Announce the new block to peers."""
+        message = {
+            "type": "ANNOUNCE",
+            "height": block['height'],
+            "minedBy": block['minedBy'],
+            "nonce": block['nonce'],
+            "messages": block['messages'],
+            "hash": block['hash'],
+            "timestamp": block['timestamp']
+        }
+        for peer in self.tracked_peers:
+            self.send_message(message, peer)
+        print("Block announcement sent to peers.")
+
+    def handle_announce(self, message):
+        """Handle a block announcement from another peer."""
+        block = {
+            "height": message["height"],
+            "minedBy": message["minedBy"],
+            "nonce": message["nonce"],
+            "messages": message["messages"],
+            "hash": message["hash"],
+            "timestamp": message["timestamp"],
+        }
+        if self.blockchain.is_valid_block(block, self.blockchain.chain[-1]):
+            self.blockchain.chain.append(block)
+            print(f"Block announced by {message['minedBy']} added to the blockchain.")
+        else:
+            print(f"Invalid block announced by {message['minedBy']} rejected.")
+
+    # -------------------- Gossip Methods --------------------
+
     def send_gossip(self):
-        """
-        Send a GOSSIP message to well-known peers and tracked peers.
-        """
+        """Send a GOSSIP message to well-known peers and tracked peers."""
         message_id = str(uuid.uuid4())
         gossip_message = {
             "type": "GOSSIP",
@@ -54,9 +129,7 @@ class Peer:
             self.send_message(gossip_message, peer)
 
     def handle_gossip(self, message, addr):
-        """
-        Handle incoming GOSSIP messages.
-        """
+        """Handle incoming GOSSIP messages."""
         gossip_id = message.get("id")
         if gossip_id in self.gossip_seen:
             print(f"Ignoring duplicate GOSSIP with ID {gossip_id}")
@@ -82,17 +155,15 @@ class Peer:
                 self.send_message(message, peer)
 
     def periodic_gossip(self):
-        """
-        Periodically send GOSSIP messages.
-        """
+        """Periodically send GOSSIP messages."""
         while self.running:
             self.send_gossip()
             time.sleep(self.GOSSIP_INTERVAL)
 
+    # -------------------- Other Methods --------------------
+
     def get_peer_stats(self, peer_host, peer_port):
-        """
-        Get blockchain stats from a peer.
-        """
+        """Get blockchain stats from a peer."""
         message = {"type": "STATS"}
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -111,10 +182,7 @@ class Peer:
             sock.close()
 
     def perform_consensus(self):
-        """
-        Perform consensus by fetching blockchain stats from well-known peers,
-        and replacing the local blockchain if a longer valid chain is found.
-        """
+        """Perform consensus by fetching blockchain stats from well-known peers."""
         longest_chain_stats = None
         longest_chain_peer = None
 
@@ -154,9 +222,7 @@ class Peer:
             print("Fetched blockchain is invalid. Keeping local blockchain.")
 
     def handle_message(self, message, addr):
-        """
-        Handle incoming messages based on their type.
-        """
+        """Handle incoming messages based on their type."""
         msg_type = message.get("type")
 
         if msg_type == "STATS":
@@ -198,19 +264,18 @@ class Peer:
         elif msg_type == "GOSSIP":
             self.handle_gossip(message, addr)
 
+        elif msg_type == "ANNOUNCE":
+            self.handle_announce(message)
+
     def send_message(self, message, destination):
-        """
-        Send a JSON-encoded message to the given destination.
-        """
+        """Send a JSON-encoded message to the given destination."""
         try:
             self.sock.sendto(json.dumps(message).encode(), destination)
         except Exception as e:
             print(f"Error sending message to {destination}: {e}")
 
     def listen(self):
-        """
-        Listen for incoming UDP messages.
-        """
+        """Listen for incoming UDP messages."""
         while self.running:
             try:
                 data, addr = self.sock.recvfrom(4096)
@@ -220,10 +285,7 @@ class Peer:
                 print(f"Error handling message: {e}")
 
     def start(self):
-        """
-        Start the peer, including the listener thread and consensus process.
-        """
-        # Start listening in a separate thread
+        """Start the peer, including the listener thread and consensus process."""
         threading.Thread(target=self.listen, daemon=True).start()
         print(f"Peer started on {self.host}:{self.port}")
 
@@ -235,10 +297,22 @@ class Peer:
         self.perform_consensus()
         print("Initial consensus complete.")
 
+        # Manual mining through user input
+        try:
+            while True:
+                command = input("Enter a command ('mine' to mine a block, 'stop' to stop the peer): ").strip().lower()
+                if command == "mine":
+                    messages = ["Hello", "Blockchain", "Assignment"]  # Example messages
+                    new_block = self.create_new_block(messages, self.name)
+                    mined_block = self.mine_block(new_block)
+                    self.add_block(mined_block)
+                elif command == "stop":
+                    break
+        finally:
+            self.stop()
+
     def stop(self):
-        """
-        Stop the peer gracefully.
-        """
+        """Stop the peer gracefully."""
         self.running = False
         self.sock.close()
         print("Peer stopped.")
@@ -253,11 +327,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     peer = Peer(args.host, args.port)
-    try:
-        peer.start()
-        while True:
-            command = input("Enter 'stop' to stop the peer: ").strip().lower()
-            if command == "stop":
-                break
-    finally:
-        peer.stop()
+    peer.start()
