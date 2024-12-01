@@ -61,12 +61,23 @@ class Blockchain:
         return True
 
     def validate_fetched_chain(self, fetched_chain):
-        """Validate the entire fetched chain."""
+        """
+        Validate the entire fetched chain and print verification stats.
+        """
+        valid = True
         for i in range(1, len(fetched_chain)):
             if not self.is_valid_block(fetched_chain[i], fetched_chain[i - 1]):
-                print(f"Fetched chain is invalid at block {i}")
-                return False
-        return True
+                print(f"Fetched chain is invalid at block {i} (Height: {fetched_chain[i]['height']})")
+                valid = False
+                break
+        if valid:
+            print("The entire fetched blockchain is verified successfully.")
+            print(f"Blockchain Stats:")
+            print(f"- Total Blocks: {len(fetched_chain)}")
+            print(f"- Last Block Hash: {fetched_chain[-1]['hash']}")
+            print(f"- Last Block Height: {fetched_chain[-1]['height']}")
+            print(f"- Mined By: {fetched_chain[-1]['minedBy']}")
+        return valid
 
     def add_block_from_response(self, response):
         """Add a block to the blockchain from a GET_BLOCK_REPLY response."""
@@ -101,7 +112,6 @@ class Blockchain:
         return {"height": len(self.chain) - 1, "hash": self.chain[-1]['hash']}
 
 
-# Example usage
 if __name__ == "__main__":
     blockchain = Blockchain()
 
