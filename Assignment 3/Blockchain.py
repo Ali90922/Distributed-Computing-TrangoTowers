@@ -22,7 +22,7 @@ class Blockchain:
             'minedBy': 'Prof!',
             'nonce': '663135608617883',
             'timestamp': 1730910874,
-            'hash': '75977fa09516d028befa0695e16c93be20271b66630236d38718e35700000000'
+            'hash': '5c25ae996e712fc8e93c10a1b9fd3b42dd408aaa65f4c3e4dfe8982800000000'
         }
         self.chain.append(genesis_block)
 
