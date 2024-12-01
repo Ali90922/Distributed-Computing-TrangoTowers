@@ -46,6 +46,9 @@ class Blockchain:
 
     def is_valid_block(self, block, prev_block):
         """Check if a block is valid."""
+        print(f"Validating block with height {block['height']} (previous block height {prev_block['height']})")
+        if block['height'] == 0:  # Skip validation for genesis block
+            return True
         if block['height'] != prev_block['height'] + 1:
             print(f"Invalid block height: {block['height']} (expected {prev_block['height'] + 1})")
             return False
@@ -64,6 +67,12 @@ class Blockchain:
         """
         Validate the entire fetched chain and print verification stats.
         """
+        print(f"Local Genesis Block: {self.chain[0]}")
+        print(f"Fetched Genesis Block: {fetched_chain[0]}")
+        if fetched_chain[0]['height'] != 0:
+            print("Invalid fetched chain: Genesis block must have height 0")
+            return False
+
         valid = True
         for i in range(1, len(fetched_chain)):
             if not self.is_valid_block(fetched_chain[i], fetched_chain[i - 1]):
