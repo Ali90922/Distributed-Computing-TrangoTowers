@@ -14,16 +14,16 @@ class Blockchain:
         self.create_genesis_block()
 
     def create_genesis_block(self):
-        """Create the genesis block (the first block of the chain)."""
+        """Create the predefined genesis block."""
         genesis_block = {
+            'type': 'GET_BLOCK_REPLY',
             'height': 0,
-            'messages': ["Genesis Block"],
-            'minedBy': "System",
-            'nonce': "0",
-            'timestamp': int(time.time()),
-            'hash': None,
+            'messages': ['Keep it', 'simple.', 'Veni', 'vidi', 'vici'],
+            'minedBy': 'Prof!',
+            'nonce': '663135608617883',
+            'timestamp': 1730910874,
+            'hash': '75977fa09516d028befa0695e16c93be20271b66630236d38718e35700000000'
         }
-        genesis_block['hash'] = self.calculate_hash(genesis_block)
         self.chain.append(genesis_block)
 
     def calculate_hash(self, block):
@@ -69,8 +69,10 @@ class Blockchain:
         """
         print(f"Local Genesis Block: {self.chain[0]}")
         print(f"Fetched Genesis Block: {fetched_chain[0]}")
-        if fetched_chain[0]['height'] != 0:
-            print("Invalid fetched chain: Genesis block must have height 0")
+
+        # Check if genesis blocks match
+        if fetched_chain[0] != self.chain[0]:
+            print("Fetched chain's genesis block does not match local genesis block!")
             return False
 
         valid = True
