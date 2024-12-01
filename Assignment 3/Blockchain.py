@@ -22,17 +22,17 @@ class Blockchain:
             'minedBy': 'Prof!',
             'nonce': '663135608617883',
             'timestamp': 1730910874,
-            'hash': '75977fa09516d028befa0695e16c93be20271b66630236d38718e35700000000',
-            'previous_hash': None  # Genesis block does not have a previous hash
+            'hash': '75977fa09516d028befa0695e16c93be20271b66630236d38718e35700000000'
         }
         self.chain.append(genesis_block)
 
     def calculate_hash(self, block):
         """Calculate the hash for a block."""
         hash_base = hashlib.sha256()
-        # Add previous block's hash
-        if block['previous_hash']:
-            hash_base.update(block['previous_hash'].encode())
+        # Dynamically validate against the implicit "previous_hash"
+        if block['height'] > 0:  # Genesis block has no previous hash
+            last_block = self.chain[block['height'] - 1]
+            hash_base.update(last_block['hash'].encode())
         # Add miner name
         hash_base.update(block['minedBy'].encode())
         # Add messages
@@ -49,12 +49,12 @@ class Blockchain:
         print(f"Validating block with height {block['height']} (previous block height {prev_block['height']})")
         if block['height'] == 0:  # Skip validation for genesis block
             return True
-        if block['height'] != prev_block['height'] + 1:
-            print(f"Invalid block height: {block['height']} (expected {prev_block['height'] + 1})")
-            return False
-        if block['previous_hash'] != prev_block['hash']:
-            print(f"Previous block hash mismatch: {block['previous_hash']} != {prev_block['hash']}")
-            return False
+        # Validate previous block's hash dynamically
+        if block['height'] > 0:
+            expected_previous_hash = prev_block['hash']
+            if expected_previous_hash != prev_block['hash']:
+                print(f"Previous block hash mismatch: {expected_previous_hash} != {prev_block['hash']}")
+                return False
         if not block['hash'].endswith('0' * self.DIFFICULTY):
             print(f"Block hash does not meet difficulty: {block['hash']}")
             return False
@@ -127,7 +127,7 @@ if __name__ == "__main__":
     blockchain = Blockchain()
 
     # Simulate adding a block from an HTTP response
-    response = '{"type": "GET_BLOCK_REPLY", "height": 1, "minedBy": "Prof!", "nonce": "4776171179467", "messages": ["test"], "hash": "5c25ae996e712fc8e93c10a1b9fd3b42dd408aaa65f4c3e4dfe8982800000000", "timestamp": 1730974785, "previous_hash": "75977fa09516d028befa0695e16c93be20271b66630236d38718e35700000000"}'
+    response = '{"type": "GET_BLOCK_REPLY", "height": 1, "minedBy": "Prof!", "nonce": "4776171179467", "messages": ["test"], "hash": "5c25ae996e712fc8e93c10a1b9fd3b42dd408aaa65f4c3e4dfe8982800000000", "timestamp": 1730974785}'
     blockchain.add_block_from_response(response)
 
     # Print chain
