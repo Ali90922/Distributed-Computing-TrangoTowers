@@ -146,7 +146,12 @@ class Peer:
         self.blockchain.chain = []
         fetcher = BlockchainFetcher(self.blockchain)
         fetcher.fetch_all_blocks(*longest_chain_peer)
-        print(f"Consensus complete with blockchain height: {len(self.blockchain.chain) - 1}")
+
+        # Validate the fetched chain and print stats
+        if self.blockchain.validate_fetched_chain(self.blockchain.chain):
+            print(f"Consensus complete. Blockchain synchronized with height: {len(self.blockchain.chain) - 1}")
+        else:
+            print("Fetched blockchain is invalid. Keeping local blockchain.")
 
     def handle_message(self, message, addr):
         """
