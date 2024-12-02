@@ -5,6 +5,7 @@ import time
 import uuid
 import hashlib
 import multiprocessing
+import os
 from BlockchainFetcher import BlockchainFetcher
 from Blockchain import Blockchain
 
@@ -12,6 +13,7 @@ from Blockchain import Blockchain
 # Define the mining function outside the class to make it picklable
 def mine_nonce_range(block_data, start_nonce, end_nonce, difficulty, result_queue):
     """Function to mine a nonce range."""
+    pid = os.getpid()
     target = '0' * difficulty
 
     for nonce in range(start_nonce, end_nonce):
@@ -23,8 +25,10 @@ def mine_nonce_range(block_data, start_nonce, end_nonce, difficulty, result_queu
         if block_hash.endswith(target):
             # Put the result in the queue
             result_queue.put((nonce, block_hash))
+            print(f"Process {pid} found nonce: {nonce}, Hash: {block_hash}")
             return
-
+        if nonce % 100000 == 0:
+            print(f"Process {pid} still mining... Current nonce: {nonce}")
 
 class Peer:
     GOSSIP_INTERVAL = 30  # Re-GOSSIP every 30 seconds
@@ -92,6 +96,7 @@ class Peer:
         found = False
 
         while not found:
+            processes = []  # Reset processes list each iteration
             for i in range(num_processes):
                 process_start_nonce = start_nonce + i * nonce_range_per_process
                 process_end_nonce = process_start_nonce + nonce_range_per_process
@@ -102,20 +107,32 @@ class Peer:
                 processes.append(p)
                 p.start()
 
-            # Wait for a result to be available
-            nonce, block_hash = result_queue.get()  # This will block until a result is available
-            found = True
+            # Wait for a result to be available or all processes to finish their range
+            nonce_found = False
+            while True:
+                if not result_queue.empty():
+                    nonce, block_hash = result_queue.get()
+                    nonce_found = True
+                    found = True
+                    break
+                if all(not p.is_alive() for p in processes):
+                    break
+                time.sleep(0.1)  # Prevent busy waiting
 
             # Terminate all processes
             for p in processes:
                 p.terminate()
                 p.join()
 
-            # Set the nonce and hash
-            block['nonce'] = str(nonce)
-            block['hash'] = block_hash
-            print(f"Block mined! Nonce: {block['nonce']}, Hash: {block['hash']}")
-            return block
+            if nonce_found:
+                # Set the nonce and hash
+                block['nonce'] = str(nonce)
+                block['hash'] = block_hash
+                print(f"Block mined! Nonce: {block['nonce']}, Hash: {block['hash']}")
+                return block
+            else:
+                print(f"Still mining... Checked nonces up to {start_nonce + num_processes * nonce_range_per_process}")
+                start_nonce += num_processes * nonce_range_per_process  # Move to the next nonce range
 
     def add_block(self, block):
         """Add a mined block to the blockchain."""
