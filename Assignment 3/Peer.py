@@ -294,7 +294,7 @@ class Peer:
             while True:
                 command = input("Enter a command ('mine' to mine a block, 'stop' to stop the peer): ").strip().lower()
                 if command == "mine":
-                    messages = ["Hello", "Blockchain", "Assignment"]  # Example messages
+                    messages = ["Jihan", "Park", "Mirha"]  # Example messages
                     new_block = self.create_new_block(messages, self.name)
                     mined_block = self.mine_block(new_block)
                     self.add_block(mined_block)
