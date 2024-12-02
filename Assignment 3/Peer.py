@@ -3,8 +3,27 @@ import json
 import threading
 import time
 import uuid
+import hashlib
+import multiprocessing
 from BlockchainFetcher import BlockchainFetcher
 from Blockchain import Blockchain
+
+
+# Define the mining function outside the class to make it picklable
+def mine_nonce_range(block_data, start_nonce, end_nonce, difficulty, result_queue):
+    """Function to mine a nonce range."""
+    target = '0' * difficulty
+
+    for nonce in range(start_nonce, end_nonce):
+        # Check if a result has already been found
+        if not result_queue.empty():
+            return
+        block_data['nonce'] = str(nonce)
+        block_hash = hashlib.sha256(json.dumps(block_data, sort_keys=True).encode()).hexdigest()
+        if block_hash.endswith(target):
+            # Put the result in the queue
+            result_queue.put((nonce, block_hash))
+            return
 
 
 class Peer:
@@ -26,7 +45,7 @@ class Peer:
         self.running = True
         self.gossip_seen = set()  # Keep track of seen GOSSIP IDs
 
-        self.name = "Nico Rosberg"  
+        self.name = "Nico Rosberg"
 
     # -------------------- Mining Methods --------------------
 
@@ -50,18 +69,53 @@ class Peer:
         return new_block
 
     def mine_block(self, block):
-        """Mine the block to meet the difficulty requirement."""
-        print(f"Mining block with height {block['height']}...")
-        nonce = 0
-        while True:
+        """Mine the block to meet the difficulty requirement using multi-processing."""
+        print(f"Mining block with height {block['height']} using multi-processing...")
+        difficulty = self.blockchain.DIFFICULTY
+
+        manager = multiprocessing.Manager()
+        result_queue = manager.Queue()
+        num_processes = multiprocessing.cpu_count()
+        nonce_range_per_process = 1000000  # Adjust as needed
+
+        # Prepare block data without the nonce and hash
+        block_data = {
+            'type': block['type'],
+            'height': block['height'],
+            'messages': block['messages'],
+            'minedBy': block['minedBy'],
+            'timestamp': block['timestamp']
+        }
+
+        processes = []
+        start_nonce = 0
+        found = False
+
+        while not found:
+            for i in range(num_processes):
+                process_start_nonce = start_nonce + i * nonce_range_per_process
+                process_end_nonce = process_start_nonce + nonce_range_per_process
+                p = multiprocessing.Process(
+                    target=mine_nonce_range,
+                    args=(block_data.copy(), process_start_nonce, process_end_nonce, difficulty, result_queue)
+                )
+                processes.append(p)
+                p.start()
+
+            # Wait for a result to be available
+            nonce, block_hash = result_queue.get()  # This will block until a result is available
+            found = True
+
+            # Terminate all processes
+            for p in processes:
+                p.terminate()
+                p.join()
+
+            # Set the nonce and hash
             block['nonce'] = str(nonce)
-            block['hash'] = self.blockchain.calculate_hash(block)
-            if block['hash'].endswith('0' * self.blockchain.DIFFICULTY):
-                print(f"Block mined! Nonce: {block['nonce']}, Hash: {block['hash']}")
-                return block
-            nonce += 1
-            if nonce % 100000 == 0:
-                print(f"Still mining... Current nonce: {nonce}")
+            block['hash'] = block_hash
+            print(f"Block mined! Nonce: {block['nonce']}, Hash: {block['hash']}")
+            return block
 
     def add_block(self, block):
         """Add a mined block to the blockchain."""
@@ -222,7 +276,7 @@ class Peer:
             # Respond with local blockchain stats
             response = {
                 "type": "STATS_REPLY",
-                "height": len(self.blockchain.chain) ,
+                "height": len(self.blockchain.chain),
                 "hash": self.blockchain.chain[-1]["hash"] if self.blockchain.chain else None,
             }
             print(f"Sending STATS_REPLY: {response}")
@@ -297,7 +351,8 @@ class Peer:
                     messages = ["Jihan", "Park", "Mirha"]  # Example messages
                     new_block = self.create_new_block(messages, self.name)
                     mined_block = self.mine_block(new_block)
-                    self.add_block(mined_block)
+                    if mined_block:
+                        self.add_block(mined_block)
                 elif command == "stop":
                     break
         finally:
