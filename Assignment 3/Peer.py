@@ -30,12 +30,18 @@ class Peer:
 
     # -------------------- Mining Methods --------------------
 
-    def create_new_block(self, miner_name):
-        """Create a new block with a single optimized message."""
+    def create_new_block(self, messages, miner_name):
+        """Create a new block with messages and miner's name."""
+        if len(messages) > self.blockchain.MAX_MESSAGES:
+            raise ValueError("Too many messages. Maximum is {}".format(self.blockchain.MAX_MESSAGES))
+        for msg in messages:
+            if len(msg) > self.blockchain.MAX_MESSAGE_LENGTH:
+                raise ValueError("Message exceeds maximum length of 20 characters.")
+
         new_block = {
             'type': 'GET_BLOCK_REPLY',
             'height': len(self.blockchain.chain),
-            'messages': ["Jihan"],  # Optimized with a single message
+            'messages': messages,
             'minedBy': miner_name,
             'nonce': '',  # To be determined during mining
             'timestamp': int(time.time()),
@@ -186,6 +192,7 @@ class Peer:
                     longest_chain_stats = peer_stats
                     longest_chain_peer = (peer_host, peer_port)
 
+        # Check if a longer chain exists
         if not longest_chain_stats:
             print("Failed to find any valid peers with longer chains. Skipping consensus.")
             return
@@ -201,10 +208,74 @@ class Peer:
         fetcher = BlockchainFetcher(self.blockchain)
         fetcher.fetch_all_blocks(*longest_chain_peer)
 
+        # Validate the fetched chain and print stats
         if self.blockchain.validate_fetched_chain(self.blockchain.chain):
             print(f"Consensus complete. Blockchain synchronized with height: {len(self.blockchain.chain) - 1}")
         else:
             print("Fetched blockchain is invalid. Keeping local blockchain.")
+
+    def handle_message(self, message, addr):
+        """Handle incoming messages based on their type."""
+        msg_type = message.get("type")
+
+        if msg_type == "STATS":
+            # Respond with local blockchain stats
+            response = {
+                "type": "STATS_REPLY",
+                "height": len(self.blockchain.chain) - 1,
+                "hash": self.blockchain.chain[-1]["hash"] if self.blockchain.chain else None,
+            }
+            print(f"Sending STATS_REPLY: {response}")
+            self.send_message(response, addr)
+
+        elif msg_type == "GET_BLOCK":
+            # Return a specific block
+            height = message.get("height")
+            if height is not None and 0 <= height < len(self.blockchain.chain):
+                block = self.blockchain.chain[height]
+                response = {
+                    "type": "GET_BLOCK_REPLY",
+                    **block
+                }
+            else:
+                response = {
+                    "type": "GET_BLOCK_REPLY",
+                    "height": None,
+                    "messages": None,
+                    "minedBy": None,
+                    "nonce": None,
+                    "hash": None,
+                    "timestamp": None
+                }
+            self.send_message(response, addr)
+
+        elif msg_type == "CONSENSUS":
+            # Perform consensus triggered by an external request
+            print("Performing consensus triggered by external request.")
+            self.perform_consensus()
+
+        elif msg_type == "GOSSIP":
+            self.handle_gossip(message, addr)
+
+        elif msg_type == "ANNOUNCE":
+            self.handle_announce(message)
+
+    def send_message(self, message, destination):
+        """Send a JSON-encoded message to the given destination."""
+        try:
+            self.sock.sendto(json.dumps(message).encode(), destination)
+        except Exception as e:
+            print(f"Error sending message to {destination}: {e}")
+
+    def listen(self):
+        """Listen for incoming UDP messages."""
+        while self.running:
+            try:
+                data, addr = self.sock.recvfrom(4096)
+                message = json.loads(data.decode())
+                self.handle_message(message, addr)
+            except Exception as e:
+                print(f"Error handling message: {e}")
 
     def start(self):
         """Start the peer, including the listener thread and consensus process."""
@@ -223,7 +294,8 @@ class Peer:
             while True:
                 command = input("Enter a command ('mine' to mine a block, 'stop' to stop the peer): ").strip().lower()
                 if command == "mine":
-                    new_block = self.create_new_block(self.name)
+                    messages = ["Hello", "Blockchain", "Assignment"]  # Example messages
+                    new_block = self.create_new_block(messages, self.name)
                     mined_block = self.mine_block(new_block)
                     self.add_block(mined_block)
                 elif command == "stop":
