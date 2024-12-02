@@ -17,10 +17,8 @@ class Peer:
         self.well_known_peers = [
             ("silicon.cs.umanitoba.ca", 8999),
             ("eagle.cs.umanitoba.ca", 8999),
-            ("goose.cs.umanitoba.ca", 8999),
             ("hawk.cs.umanitoba.ca", 8999),
-            ("goose.cs.umanitoba.ca", 8997),
-        ]
+        ]  # Removed goose.cs.umanitoba.ca
         self.tracked_peers = set()  # Dynamically track peers
         self.blockchain = Blockchain()  # Initialize the blockchain
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -85,7 +83,8 @@ class Peer:
             "hash": block['hash'],
             "timestamp": block['timestamp']
         }
-        for peer in self.tracked_peers:
+        peers_copy = list(self.tracked_peers)  # Prevent modification during iteration
+        for peer in peers_copy:
             self.send_message(message, peer)
         print("Block announcement sent to peers.")
 
@@ -124,8 +123,8 @@ class Peer:
             self.send_message(gossip_message, peer)
 
         # Forward GOSSIP to tracked peers
-        tracked_peers_to_gossip = list(self.tracked_peers)[:self.MAX_PEERS_TO_GOSSIP]
-        for peer in tracked_peers_to_gossip:
+        peers_copy = list(self.tracked_peers)
+        for peer in peers_copy[:self.MAX_PEERS_TO_GOSSIP]:
             self.send_message(gossip_message, peer)
 
     def handle_gossip(self, message, addr):
@@ -147,12 +146,6 @@ class Peer:
             "name": self.name,
         }
         self.send_message(gossip_reply, addr)
-
-        # Forward the GOSSIP to 3 tracked peers
-        tracked_peers_to_gossip = list(self.tracked_peers)[:self.MAX_PEERS_TO_GOSSIP]
-        for peer in tracked_peers_to_gossip:
-            if peer != addr:  # Avoid forwarding back to the originator
-                self.send_message(message, peer)
 
     def periodic_gossip(self):
         """Periodically send GOSSIP messages."""
@@ -289,10 +282,9 @@ class Peer:
         threading.Thread(target=self.listen, daemon=True).start()
         print(f"Peer started on {self.host}:{self.port}")
 
-        # Start periodic gossiping in a separate thread
         threading.Thread(target=self.periodic_gossip, daemon=True).start()
 
-        # Perform initial consensus to synchronize blockchain
+        # Perform initial consensus
         print("Performing initial consensus...")
         self.perform_consensus()
         print("Initial consensus complete.")
