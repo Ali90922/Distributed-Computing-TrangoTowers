@@ -26,7 +26,7 @@ class Peer:
         self.running = True
         self.gossip_seen = set()  # Keep track of seen GOSSIP IDs
 
-        self.name = "Max Verstappen"  # Your name
+        self.name = "Nico Rosberg"  
 
     # -------------------- Mining Methods --------------------
 
