@@ -222,7 +222,7 @@ class Peer:
             # Respond with local blockchain stats
             response = {
                 "type": "STATS_REPLY",
-                "height": len(self.blockchain.chain) - 1,
+                "height": len(self.blockchain.chain),
                 "hash": self.blockchain.chain[-1]["hash"] if self.blockchain.chain else None,
             }
             print(f"Sending STATS_REPLY: {response}")
