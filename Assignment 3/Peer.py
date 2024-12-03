@@ -98,6 +98,10 @@ class Peer:
             "hash": message["hash"],
             "timestamp": message["timestamp"],
         }
+        # Check if the block is already in the chain
+        if any(b['hash'] == block['hash'] for b in self.blockchain.chain):
+            print(f"Duplicate block announced by {message['minedBy']} ignored.")
+        return
         if self.blockchain.is_valid_block(block, self.blockchain.chain[-1]):
             self.blockchain.chain.append(block)
             print(f"Block announced by {message['minedBy']} added to the blockchain.")
