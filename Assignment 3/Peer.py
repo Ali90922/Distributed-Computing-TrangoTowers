@@ -319,18 +319,14 @@ class Peer:
         self.perform_consensus()
         print("Initial consensus complete.")
 
-        # Manual mining through user input
+        # Continuous mining loop
         try:
-            while True:
-                command = input("Enter a command ('mine' to mine a block, 'stop' to stop the peer): ").strip().lower()
-                if command == "mine":
-                    messages = ["Mirha", "Mirha", "Mirha"]  # Example messages
-                    new_block = self.create_new_block(messages, self.name)
-                    mined_block = self.mine_block(new_block)
-                    if mined_block:
-                        self.add_block(mined_block)
-                elif command == "stop":
-                    break
+            while self.running:
+                messages = ["Jihan", "Park", "Mirha"]  # Example messages
+                new_block = self.create_new_block(messages, self.name)
+                mined_block = self.mine_block(new_block)
+                if mined_block:
+                    self.add_block(mined_block)
         finally:
             self.stop()
 
