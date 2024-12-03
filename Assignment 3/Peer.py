@@ -3,6 +3,7 @@ import json
 import threading
 import time
 import uuid
+import multiprocessing
 from BlockchainFetcher import BlockchainFetcher
 from Blockchain import Blockchain
 
@@ -50,18 +51,46 @@ class Peer:
         return new_block
 
     def mine_block(self, block):
-        """Mine the block to meet the difficulty requirement."""
-        print(f"Mining block with height {block['height']}...")
-        nonce = 0
-        while True:
-            block['nonce'] = str(nonce)
-            block['hash'] = self.blockchain.calculate_hash(block)
-            if block['hash'].endswith('0' * self.blockchain.DIFFICULTY):
-                print(f"Block mined! Nonce: {block['nonce']}, Hash: {block['hash']}")
-                return block
-            nonce += 1
-            if nonce % 100000 == 0:
-                print(f"Still mining... Current nonce: {nonce}")
+        """Mine the block to meet the difficulty requirement using multiprocessing."""
+        print(f"Mining block with height {block['height']} using multiprocessing...")
+
+        num_processes = multiprocessing.cpu_count()
+        print(f"Starting mining with {num_processes} processes...")
+        manager = multiprocessing.Manager()
+        return_dict = manager.dict()  # Shared dict to store the result
+        stop_event = multiprocessing.Event()
+
+        def worker(start_nonce, step, block, return_dict, stop_event):
+            nonce = start_nonce
+            while not stop_event.is_set():
+                block_copy = block.copy()
+                block_copy['nonce'] = str(nonce)
+                block_copy['hash'] = self.blockchain.calculate_hash(block_copy)
+                if block_copy['hash'].endswith('0' * self.blockchain.DIFFICULTY):
+                    # Found a valid nonce
+                    print(f"Process {multiprocessing.current_process().name} found nonce: {nonce}")
+                    return_dict['block'] = block_copy
+                    stop_event.set()
+                    break
+                nonce += step
+                if nonce % 100000 == 0:
+                    print(f"Process {multiprocessing.current_process().name} still mining... Current nonce: {nonce}")
+
+        processes = []
+        for i in range(num_processes):
+            p = multiprocessing.Process(target=worker, args=(i, num_processes, block, return_dict, stop_event))
+            processes.append(p)
+            p.start()
+
+        for p in processes:
+            p.join()
+
+        if 'block' in return_dict:
+            print(f"Block mined! Nonce: {return_dict['block']['nonce']}, Hash: {return_dict['block']['hash']}")
+            return return_dict['block']
+        else:
+            print("Failed to mine block.")
+            return None
 
     def add_block(self, block):
         """Add a mined block to the blockchain."""
@@ -100,8 +129,8 @@ class Peer:
         }
         # Check if the block is already in the chain
         if any(b['hash'] == block['hash'] for b in self.blockchain.chain):
-            print(f"Duplicate block announced by {message['minedBy']} ignored.")
-        return
+            # Duplicate block, ignore
+            return
         if self.blockchain.is_valid_block(block, self.blockchain.chain[-1]):
             self.blockchain.chain.append(block)
             print(f"Block announced by {message['minedBy']} added to the blockchain.")
@@ -120,8 +149,6 @@ class Peer:
             "id": message_id,
             "name": self.name,
         }
-        print(f"Sending GOSSIP with ID {message_id}...")
-
         # Send GOSSIP to well-known peers
         for peer in self.well_known_peers:
             self.send_message(gossip_message, peer)
@@ -135,10 +162,9 @@ class Peer:
         """Handle incoming GOSSIP messages."""
         gossip_id = message.get("id")
         if gossip_id in self.gossip_seen:
-            print(f"Ignoring duplicate GOSSIP with ID {gossip_id}")
+            # Duplicate GOSSIP, ignore
             return
 
-        print(f"Received GOSSIP with ID {gossip_id} from {addr}")
         self.gossip_seen.add(gossip_id)
         self.tracked_peers.add((message["host"], message["port"]))
 
@@ -226,7 +252,7 @@ class Peer:
             # Respond with local blockchain stats
             response = {
                 "type": "STATS_REPLY",
-                "height": len(self.blockchain.chain) ,
+                "height": len(self.blockchain.chain),
                 "hash": self.blockchain.chain[-1]["hash"] if self.blockchain.chain else None,
             }
             print(f"Sending STATS_REPLY: {response}")
@@ -298,10 +324,11 @@ class Peer:
             while True:
                 command = input("Enter a command ('mine' to mine a block, 'stop' to stop the peer): ").strip().lower()
                 if command == "mine":
-                    messages = ["Jihan", "Park", "Mirha"]  # Example messages
+                    messages = ["Mirha", "Mirha", "Mirha"]  # Example messages
                     new_block = self.create_new_block(messages, self.name)
                     mined_block = self.mine_block(new_block)
-                    self.add_block(mined_block)
+                    if mined_block:
+                        self.add_block(mined_block)
                 elif command == "stop":
                     break
         finally:
