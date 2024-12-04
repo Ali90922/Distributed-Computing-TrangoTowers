@@ -4,6 +4,7 @@ import threading
 import time
 import uuid
 import multiprocessing
+from threading import Lock
 from BlockchainFetcher import BlockchainFetcher
 from Blockchain import Blockchain
 
@@ -22,12 +23,15 @@ class Peer:
         ]  # Removed goose.cs.umanitoba.ca
         self.tracked_peers = set()  # Dynamically track peers
         self.blockchain = Blockchain()  # Initialize the blockchain
+        self.blockchain_lock = Lock()  # Lock for thread-safe blockchain access
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
         self.running = True
         self.gossip_seen = set()  # Keep track of seen GOSSIP IDs
 
-        self.name = "Nico Rosberg"  
+        self.name = "Nico Rosberg"
+
+        self.CONSENSUS_INTERVAL = 60  # Perform consensus every 60 seconds
 
     # -------------------- Mining Methods --------------------
 
@@ -39,9 +43,11 @@ class Peer:
             if len(msg) > self.blockchain.MAX_MESSAGE_LENGTH:
                 raise ValueError("Message exceeds maximum length of 20 characters.")
 
+        with self.blockchain_lock:
+            height = len(self.blockchain.chain)
         new_block = {
             'type': 'GET_BLOCK_REPLY',
-            'height': len(self.blockchain.chain),
+            'height': height,
             'messages': messages,
             'minedBy': miner_name,
             'nonce': '',  # To be determined during mining
@@ -94,12 +100,14 @@ class Peer:
 
     def add_block(self, block):
         """Add a mined block to the blockchain."""
-        if self.blockchain.is_valid_block(block, self.blockchain.chain[-1]):
-            self.blockchain.chain.append(block)
-            print(f"Block added to the blockchain! Height: {block['height']}, Hash: {block['hash']}")
-            self.announce_block(block)
-        else:
-            print("Mined block is invalid and was not added.")
+        with self.blockchain_lock:
+            previous_block = self.blockchain.chain[-1] if self.blockchain.chain else None
+            if self.blockchain.is_valid_block(block, previous_block):
+                self.blockchain.chain.append(block)
+                print(f"Block added to the blockchain! Height: {block['height']}, Hash: {block['hash']}")
+                self.announce_block(block)
+            else:
+                print("Mined block is invalid and was not added.")
 
     def announce_block(self, block):
         """Announce the new block to peers."""
@@ -127,15 +135,24 @@ class Peer:
             "hash": message["hash"],
             "timestamp": message["timestamp"],
         }
-        # Check if the block is already in the chain
-        if any(b['hash'] == block['hash'] for b in self.blockchain.chain):
-            # Duplicate block, ignore
-            return
-        if self.blockchain.is_valid_block(block, self.blockchain.chain[-1]):
-            self.blockchain.chain.append(block)
-            print(f"Block announced by {message['minedBy']} added to the blockchain.")
-        else:
-            print(f"Invalid block announced by {message['minedBy']} rejected.")
+        with self.blockchain_lock:
+            # Check if the block is already in the chain
+            if any(b['hash'] == block['hash'] for b in self.blockchain.chain):
+                # Duplicate block, ignore
+                return
+
+            # Check if the block extends the current chain
+            if block['height'] == len(self.blockchain.chain):
+                previous_block = self.blockchain.chain[-1] if self.blockchain.chain else None
+                if self.blockchain.is_valid_block(block, previous_block):
+                    self.blockchain.chain.append(block)
+                    print(f"Block announced by {message['minedBy']} added to the blockchain.")
+                else:
+                    print(f"Invalid block announced by {message['minedBy']} rejected.")
+            else:
+                # The announced block doesn't fit directly; trigger consensus
+                print("Received a block that doesn't fit the current chain. Triggering consensus...")
+                self.perform_consensus()
 
     # -------------------- Gossip Methods --------------------
 
@@ -183,7 +200,7 @@ class Peer:
             self.send_gossip()
             time.sleep(self.GOSSIP_INTERVAL)
 
-    # -------------------- Other Methods --------------------
+    # -------------------- Consensus Methods --------------------
 
     def get_peer_stats(self, peer_host, peer_port):
         """Get blockchain stats from a peer."""
@@ -227,22 +244,37 @@ class Peer:
             print("Failed to find any valid peers with longer chains. Skipping consensus.")
             return
 
-        if longest_chain_stats["height"] <= len(self.blockchain.chain) - 1:
+        with self.blockchain_lock:
+            local_height = len(self.blockchain.chain)
+        if longest_chain_stats["height"] <= local_height - 1:
             print("Local blockchain is already up to date or matches the longest chain.")
             return
 
         print(f"Peer {longest_chain_peer[0]}:{longest_chain_peer[1]} has the longest chain (height {longest_chain_stats['height']}). Fetching their blockchain...")
 
         # Clear local chain and fetch the longer one
-        self.blockchain.chain = []
+        with self.blockchain_lock:
+            self.blockchain.chain = []
         fetcher = BlockchainFetcher(self.blockchain)
         fetcher.fetch_all_blocks(*longest_chain_peer)
 
         # Validate the fetched chain and print stats
-        if self.blockchain.validate_fetched_chain(self.blockchain.chain):
-            print(f"Consensus complete. Blockchain synchronized with height: {len(self.blockchain.chain) - 1}")
+        with self.blockchain_lock:
+            fetched_chain = self.blockchain.chain
+            is_valid = self.blockchain.validate_fetched_chain(fetched_chain)
+        if is_valid:
+            print(f"Consensus complete. Blockchain synchronized with height: {len(fetched_chain)}")
         else:
             print("Fetched blockchain is invalid. Keeping local blockchain.")
+
+    def periodic_consensus(self):
+        """Periodically perform consensus to synchronize with the network."""
+        while self.running:
+            time.sleep(self.CONSENSUS_INTERVAL)
+            print("Performing periodic consensus...")
+            self.perform_consensus()
+
+    # -------------------- Other Methods --------------------
 
     def handle_message(self, message, addr):
         """Handle incoming messages based on their type."""
@@ -250,33 +282,34 @@ class Peer:
 
         if msg_type == "STATS":
             # Respond with local blockchain stats
-            response = {
-                "type": "STATS_REPLY",
-                "height": len(self.blockchain.chain),
-                "hash": self.blockchain.chain[-1]["hash"] if self.blockchain.chain else None,
-            }
-            print(f"Sending STATS_REPLY: {response}")
+            with self.blockchain_lock:
+                response = {
+                    "type": "STATS_REPLY",
+                    "height": len(self.blockchain.chain),
+                    "hash": self.blockchain.chain[-1]["hash"] if self.blockchain.chain else None,
+                }
             self.send_message(response, addr)
 
         elif msg_type == "GET_BLOCK":
             # Return a specific block
             height = message.get("height")
-            if height is not None and 0 <= height < len(self.blockchain.chain):
-                block = self.blockchain.chain[height]
-                response = {
-                    "type": "GET_BLOCK_REPLY",
-                    **block
-                }
-            else:
-                response = {
-                    "type": "GET_BLOCK_REPLY",
-                    "height": None,
-                    "messages": None,
-                    "minedBy": None,
-                    "nonce": None,
-                    "hash": None,
-                    "timestamp": None
-                }
+            with self.blockchain_lock:
+                if height is not None and 0 <= height < len(self.blockchain.chain):
+                    block = self.blockchain.chain[height]
+                    response = {
+                        "type": "GET_BLOCK_REPLY",
+                        **block
+                    }
+                else:
+                    response = {
+                        "type": "GET_BLOCK_REPLY",
+                        "height": None,
+                        "messages": None,
+                        "minedBy": None,
+                        "nonce": None,
+                        "hash": None,
+                        "timestamp": None
+                    }
             self.send_message(response, addr)
 
         elif msg_type == "CONSENSUS":
@@ -307,12 +340,31 @@ class Peer:
             except Exception as e:
                 print(f"Error handling message: {e}")
 
+    def is_chain_synced(self):
+        """Check if the local chain height matches the network's height."""
+        max_peer_height = self.get_max_peer_height()
+        with self.blockchain_lock:
+            local_height = len(self.blockchain.chain)
+        return local_height >= max_peer_height
+
+    def get_max_peer_height(self):
+        """Get the maximum chain height among known peers."""
+        max_height = 0
+        for peer_host, peer_port in self.well_known_peers:
+            peer_stats = self.get_peer_stats(peer_host, peer_port)
+            if peer_stats and 'height' in peer_stats:
+                if peer_stats['height'] > max_height:
+                    max_height = peer_stats['height']
+        return max_height
+
     def start(self):
         """Start the peer, including the listener thread and consensus process."""
         threading.Thread(target=self.listen, daemon=True).start()
         print(f"Peer started on {self.host}:{self.port}")
 
         threading.Thread(target=self.periodic_gossip, daemon=True).start()
+
+        threading.Thread(target=self.periodic_consensus, daemon=True).start()
 
         # Perform initial consensus
         print("Performing initial consensus...")
@@ -322,11 +374,18 @@ class Peer:
         # Continuous mining loop
         try:
             while self.running:
-                messages = ["Jihan", "Park", "Mirha"]  # Example messages
-                new_block = self.create_new_block(messages, self.name)
-                mined_block = self.mine_block(new_block)
-                if mined_block:
-                    self.add_block(mined_block)
+                # Check if local chain is synchronized before mining
+                if self.is_chain_synced():
+                    messages = ["Jihan", "Park", "Mirha"]  # Example messages
+                    new_block = self.create_new_block(messages, self.name)
+                    mined_block = self.mine_block(new_block)
+                    if mined_block:
+                        self.add_block(mined_block)
+                else:
+                    print("Local chain is not synchronized. Waiting before mining...")
+                    time.sleep(self.CONSENSUS_INTERVAL)
+        except KeyboardInterrupt:
+            pass
         finally:
             self.stop()
 
