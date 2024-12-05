@@ -29,7 +29,7 @@ class Peer:
         self.running = True
         self.gossip_seen = set()  # Keep track of seen GOSSIP IDs
 
-        self.name = "Nico Rosberg"
+        self.name = "Baron Harkonen"
 
         self.CONSENSUS_INTERVAL = 60  # Perform consensus every 60 seconds
 
