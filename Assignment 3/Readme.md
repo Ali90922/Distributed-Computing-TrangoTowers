@@ -38,13 +38,11 @@ How to Run the Code
      python Sardukar.py --host <HOST_IP> --port <PORT> 
      ```
 
-3. Join the network:
+2. Join the network:
    - The peer will automatically send a GOSSIP message to one of the well-known hosts.
 
-4. Mining:
-   - Mining is implemented in `Sardukar.py`. The Sardukar file is a slightly modified version of Peer.py with focus on mining - 
 
-5. Testing Protocols:
+3. Testing Protocols:
    - Use the `test_cli.py` script to send protocol messages like `GET_BLOCK`, `STATS`, and `CONSENSUS`:
      ```
      python test_cli.py --command "STATS"
@@ -147,7 +145,17 @@ Mining
 -  Mining is implemented by spawning multiple processes, each searching a distinct range of nonces to find one that produces a hash meeting the difficulty requirements. The main process creates a shared Manager and Queue to coordinate results, then divides the nonce space into chunks which are processed in parallel. Each subprocess attempts to find a nonce that produces a valid block hash, periodically logging its progress. If any subprocess finds a valid nonce, it places the result in the shared queue, causing all other processes to terminate. The mined block is then updated with the discovered nonce and hash before being added to the local blockchain and announced to the network
 
 -  By continuously running a dedicated mining thread and properly synchronizing it with the main thread, I’ve shown advanced concurrency management that ensures parallel processing of block mining without blocking other operations -- Thus I do deserve the 10 % Bonus marks !
--  Note - I verify the new block with the previous block hash before announcing it to the Network.
+-  Note - I verify the new block with the previous block hash before announcing it to the Network. Following is the code which calls the verify block method : blockchain.is_valid_block before announcing a new block
+
+- def add_block(self, block):
+        """Add a mined block to the blockchain."""
+        if self.blockchain.is_valid_block(block, self.blockchain.chain[-1]):
+            self.blockchain.chain.append(block)
+            print(f"Block added to the blockchain! Height: {block['height']}, Hash: {block['hash']}")
+            self.announce_block(block)
+        else:
+            print("Mined block is invalid and was not added.")
+ 
 
 
 
