@@ -95,7 +95,7 @@ class Peer:
         start_nonce = 0
         found = False
 
-        while not found:
+        while not found and self.running:
             processes = []  # Reset processes list each iteration
             for i in range(num_processes):
                 process_start_nonce = start_nonce + i * nonce_range_per_process
@@ -109,7 +109,7 @@ class Peer:
 
             # Wait for a result to be available or all processes to finish their range
             nonce_found = False
-            while True:
+            while self.running:
                 if not result_queue.empty():
                     nonce, block_hash = result_queue.get()
                     nonce_found = True
@@ -345,6 +345,17 @@ class Peer:
             except Exception as e:
                 print(f"Error handling message: {e}")
 
+    def start_mining_loop(self):
+        """Continuously mine new blocks without user input."""
+        while self.running:
+            messages = ["Jihan", "Park", "Mirha"]  # Example messages
+            new_block = self.create_new_block(messages, self.name)
+            mined_block = self.mine_block(new_block)
+            if mined_block:
+                self.add_block(mined_block)
+            # Add a small delay to prevent rapid-fire mining loops, if desired
+            time.sleep(1)
+
     def start(self):
         """Start the peer, including the listener thread and consensus process."""
         threading.Thread(target=self.listen, daemon=True).start()
@@ -357,18 +368,9 @@ class Peer:
         self.perform_consensus()
         print("Initial consensus complete.")
 
-        # Manual mining through user input
+        # Start mining automatically
         try:
-            while True:
-                command = input("Enter a command ('mine' to mine a block, 'stop' to stop the peer): ").strip().lower()
-                if command == "mine":
-                    messages = ["Jihan", "Park", "Mirha"]  # Example messages
-                    new_block = self.create_new_block(messages, self.name)
-                    mined_block = self.mine_block(new_block)
-                    if mined_block:
-                        self.add_block(mined_block)
-                elif command == "stop":
-                    break
+            self.start_mining_loop()
         finally:
             self.stop()
 
