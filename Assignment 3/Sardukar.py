@@ -45,13 +45,17 @@ class Peer:
         ]
         self.tracked_peers = set()  # Dynamically track peers
         self.blockchain = Blockchain()  # Initialize the blockchain
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock = socket.socket(socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
         self.running = True
         self.gossip_seen = set()  # Keep track of seen GOSSIP IDs
 
         self.name = "Nico Rosberg"
         self.mining_enabled = True  # Flag to control mining
+
+        # Track the last time we received GOSSIP from each peer
+        self.peer_last_gossip_time = {}
+        self.gossip_timeout = 120  # For example, 2 minutes timeout
 
     # -------------------- Mining Methods --------------------
 
@@ -209,6 +213,8 @@ class Peer:
             return
         self.gossip_seen.add(gossip_id)
         self.tracked_peers.add((message["host"], message["port"]))
+        # Update last seen time for this peer
+        self.peer_last_gossip_time[(message["host"], message["port"])] = time.time()
 
         # Reply to the sender with GOSSIP-REPLY
         gossip_reply = {
@@ -220,9 +226,22 @@ class Peer:
         self.send_message(gossip_reply, addr)
 
     def periodic_gossip(self):
-        """Periodically send GOSSIP messages."""
+        """Periodically send GOSSIP messages and cleanup inactive peers."""
         while self.running:
             self.send_gossip()
+
+            # Cleanup peers that haven't sent GOSSIP recently
+            current_time = time.time()
+            peers_to_remove = []
+            for peer in list(self.tracked_peers):
+                last_seen = self.peer_last_gossip_time.get(peer, None)
+                if last_seen is not None and (current_time - last_seen > self.gossip_timeout):
+                    peers_to_remove.append(peer)
+
+            for peer in peers_to_remove:
+                self.tracked_peers.remove(peer)
+                self.peer_last_gossip_time.pop(peer, None)
+
             time.sleep(self.GOSSIP_INTERVAL)
 
     # -------------------- Other Methods --------------------
