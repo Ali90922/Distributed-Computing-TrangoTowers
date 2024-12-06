@@ -30,6 +30,7 @@ def mine_nonce_range(block_data, start_nonce, end_nonce, difficulty, result_queu
         if nonce % 100000 == 0:
             print(f"Process {pid} still mining... Current nonce: {nonce}")
 
+
 class Peer:
     GOSSIP_INTERVAL = 30  # Re-GOSSIP every 30 seconds
     MAX_PEERS_TO_GOSSIP = 3  # Repeat GOSSIP to 3 tracked peers
@@ -41,7 +42,7 @@ class Peer:
             ("silicon.cs.umanitoba.ca", 8999),
             ("eagle.cs.umanitoba.ca", 8999),
             ("hawk.cs.umanitoba.ca", 8999),
-        ]  # Removed goose.cs.umanitoba.ca
+        ]
         self.tracked_peers = set()  # Dynamically track peers
         self.blockchain = Blockchain()  # Initialize the blockchain
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -50,6 +51,7 @@ class Peer:
         self.gossip_seen = set()  # Keep track of seen GOSSIP IDs
 
         self.name = "Nico Rosberg"
+        self.mining_enabled = True  # Flag to control mining
 
     # -------------------- Mining Methods --------------------
 
@@ -95,7 +97,7 @@ class Peer:
         start_nonce = 0
         found = False
 
-        while not found and self.running:
+        while not found and self.running and self.mining_enabled:
             processes = []  # Reset processes list each iteration
             for i in range(num_processes):
                 process_start_nonce = start_nonce + i * nonce_range_per_process
@@ -109,7 +111,7 @@ class Peer:
 
             # Wait for a result or processes to finish
             nonce_found = False
-            while self.running:
+            while self.running and self.mining_enabled:
                 if not result_queue.empty():
                     nonce, block_hash = result_queue.get()
                     nonce_found = True
@@ -131,8 +133,11 @@ class Peer:
                 print(f"Block mined! Nonce: {block['nonce']}, Hash: {block['hash']}")
                 return block
             else:
-                print(f"Still mining... Checked nonces up to {start_nonce + num_processes * nonce_range_per_process}")
+                if self.mining_enabled:
+                    print(f"Still mining... Checked nonces up to {start_nonce + num_processes * nonce_range_per_process}")
                 start_nonce += num_processes * nonce_range_per_process
+
+        return None
 
     def add_block(self, block):
         """Add a mined block to the blockchain."""
@@ -243,49 +248,57 @@ class Peer:
 
     def perform_consensus(self):
         """Perform consensus by fetching blockchain stats from well-known peers."""
-        longest_chain_stats = None
-        longest_chain_peer = None
+        # Temporarily pause mining while performing consensus
+        self.mining_enabled = False
 
-        # Fetch stats from all well-known peers
-        for peer_host, peer_port in self.well_known_peers:
-            print(f"Fetching stats from {peer_host}:{peer_port}...")
-            peer_stats = self.get_peer_stats(peer_host, peer_port)
-            if not peer_stats:
-                continue
+        try:
+            longest_chain_stats = None
+            longest_chain_peer = None
 
-            peer_height = peer_stats.get("height")
-            if peer_height is not None:
-                if not longest_chain_stats or peer_height > longest_chain_stats["height"]:
-                    longest_chain_stats = peer_stats
-                    longest_chain_peer = (peer_host, peer_port)
+            # Fetch stats from all well-known peers
+            for peer_host, peer_port in self.well_known_peers:
+                print(f"Fetching stats from {peer_host}:{peer_port}...")
+                peer_stats = self.get_peer_stats(peer_host, peer_port)
+                if not peer_stats:
+                    continue
 
-        # Check if a longer chain exists
-        if not longest_chain_stats:
-            print("Failed to find any valid peers with longer chains. Skipping consensus.")
-            return
+                peer_height = peer_stats.get("height")
+                if peer_height is not None:
+                    if not longest_chain_stats or peer_height > longest_chain_stats["height"]:
+                        longest_chain_stats = peer_stats
+                        longest_chain_peer = (peer_host, peer_port)
 
-        # If our local chain is already as long or longer, no need to fetch
-        if longest_chain_stats["height"] <= len(self.blockchain.chain) - 1:
-            print("Local blockchain is already up to date or matches the longest chain.")
-            return
+            # Check if a longer chain exists
+            if not longest_chain_stats:
+                print("Failed to find any valid peers with longer chains. Skipping consensus.")
+                return
 
-        print(f"Peer {longest_chain_peer[0]}:{longest_chain_peer[1]} has the longest chain (height {longest_chain_stats['height']}). Fetching their blockchain...")
+            # If our local chain is already as long or longer, no need to fetch
+            if longest_chain_stats["height"] <= len(self.blockchain.chain) - 1:
+                print("Local blockchain is already up to date or matches the longest chain.")
+                return
 
-        # Clear local chain
-        self.blockchain.chain = []
+            print(f"Peer {longest_chain_peer[0]}:{longest_chain_peer[1]} has the longest chain (height {longest_chain_stats['height']}). Fetching their blockchain...")
 
-        # Prepare a list of all peers (well-known + tracked) for workload distribution
-        all_peers = self.well_known_peers + list(self.tracked_peers)
+            # Clear local chain
+            self.blockchain.chain = []
 
-        # Instantiate the fetcher and fetch all blocks
-        fetcher = BlockchainFetcher(self.blockchain)
-        fetcher.fetch_all_blocks(all_peers, longest_chain_peer, longest_chain_stats["height"])
+            # Prepare a list of all peers (well-known + tracked) for workload distribution
+            all_peers = self.well_known_peers + list(self.tracked_peers)
 
-        # Validate the fetched chain
-        if self.blockchain.validate_fetched_chain(self.blockchain.chain):
-            print(f"Consensus complete. Blockchain synchronized with height: {len(self.blockchain.chain) - 1}")
-        else:
-            print("Fetched blockchain is invalid. Keeping local blockchain.")
+            # Instantiate the fetcher and fetch all blocks
+            fetcher = BlockchainFetcher(self.blockchain)
+            fetcher.fetch_all_blocks(all_peers, longest_chain_peer, longest_chain_stats["height"])
+
+            # Validate the fetched chain
+            if self.blockchain.validate_fetched_chain(self.blockchain.chain):
+                print(f"Consensus complete. Blockchain synchronized with height: {len(self.blockchain.chain) - 1}")
+            else:
+                print("Fetched blockchain is invalid. Keeping local blockchain.")
+        finally:
+            # Re-enable mining after consensus if still running
+            if self.running:
+                self.mining_enabled = True
 
     def handle_message(self, message, addr):
         """Handle incoming messages based on their type."""
@@ -353,6 +366,11 @@ class Peer:
     def start_mining_loop(self):
         """Continuously mine new blocks without user input."""
         while self.running:
+            # If mining is disabled, wait until it's enabled again
+            if not self.mining_enabled:
+                time.sleep(1)
+                continue
+
             messages = ["Jihan", "Park", "Mirha"]  # Example messages
             new_block = self.create_new_block(messages, self.name)
             mined_block = self.mine_block(new_block)
@@ -373,10 +391,15 @@ class Peer:
         self.perform_consensus()
         print("Initial consensus complete.")
 
-        # Start mining automatically
+        # Start mining automatically in a separate thread
+        # so that the main thread can handle other tasks.
+        threading.Thread(target=self.start_mining_loop, daemon=True).start()
+
+        # Keep the main thread alive
         try:
-            self.start_mining_loop()
-        finally:
+            while self.running:
+                time.sleep(1)
+        except KeyboardInterrupt:
             self.stop()
 
     def stop(self):
