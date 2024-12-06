@@ -17,23 +17,8 @@ class BlockchainFetcher:
         self.retry_delay = retry_delay
 
     def fetch_all_blocks(self, all_peers, longest_chain_peer, longest_chain_height):
-        """
-        Fetch all blocks up to the longest chain height.
-        
-        This method attempts to fetch blocks from the list of all known peers
-        in a round-robin fashion to distribute the workload. If a block cannot
-        be fetched from any of the known peers, it will attempt to fetch it
-        from the longest chain peer (which is guaranteed to have all blocks).
-        
-        Args:
-            all_peers: A list of tuples (host, port) of known peers.
-            longest_chain_peer: A tuple (host, port) of the peer with the longest chain.
-            longest_chain_height: The height of the longest chain.
 
-            
-        """
-
-
+# Remove this HardList if u want to actually get blocks from everyone - but network is really bad right now - and people aren;t sending blocks properly 
         all_peers = [
     ("silicon.cs.umanitoba.ca", 8999),
     ("eagle.cs.umanitoba.ca", 8999),
