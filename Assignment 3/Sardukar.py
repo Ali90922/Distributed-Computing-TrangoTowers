@@ -107,7 +107,7 @@ class Peer:
                 processes.append(p)
                 p.start()
 
-            # Wait for a result to be available or all processes to finish their range
+            # Wait for a result or processes to finish
             nonce_found = False
             while self.running:
                 if not result_queue.empty():
@@ -117,7 +117,7 @@ class Peer:
                     break
                 if all(not p.is_alive() for p in processes):
                     break
-                time.sleep(0.1)  # Prevent busy waiting
+                time.sleep(0.1)
 
             # Terminate all processes
             for p in processes:
@@ -132,7 +132,7 @@ class Peer:
                 return block
             else:
                 print(f"Still mining... Checked nonces up to {start_nonce + num_processes * nonce_range_per_process}")
-                start_nonce += num_processes * nonce_range_per_process  # Move to the next nonce range
+                start_nonce += num_processes * nonce_range_per_process
 
     def add_block(self, block):
         """Add a mined block to the blockchain."""
@@ -202,7 +202,6 @@ class Peer:
         gossip_id = message.get("id")
         if gossip_id in self.gossip_seen:
             return
-
         self.gossip_seen.add(gossip_id)
         self.tracked_peers.add((message["host"], message["port"]))
 
@@ -265,18 +264,24 @@ class Peer:
             print("Failed to find any valid peers with longer chains. Skipping consensus.")
             return
 
+        # If our local chain is already as long or longer, no need to fetch
         if longest_chain_stats["height"] <= len(self.blockchain.chain) - 1:
             print("Local blockchain is already up to date or matches the longest chain.")
             return
 
         print(f"Peer {longest_chain_peer[0]}:{longest_chain_peer[1]} has the longest chain (height {longest_chain_stats['height']}). Fetching their blockchain...")
 
-        # Clear local chain and fetch the longer one
+        # Clear local chain
         self.blockchain.chain = []
-        fetcher = BlockchainFetcher(self.blockchain)
-        fetcher.fetch_all_blocks(*longest_chain_peer)
 
-        # Validate the fetched chain and print stats
+        # Prepare a list of all peers (well-known + tracked) for workload distribution
+        all_peers = self.well_known_peers + list(self.tracked_peers)
+
+        # Instantiate the fetcher and fetch all blocks
+        fetcher = BlockchainFetcher(self.blockchain)
+        fetcher.fetch_all_blocks(all_peers, longest_chain_peer, longest_chain_stats["height"])
+
+        # Validate the fetched chain
         if self.blockchain.validate_fetched_chain(self.blockchain.chain):
             print(f"Consensus complete. Blockchain synchronized with height: {len(self.blockchain.chain) - 1}")
         else:
@@ -353,7 +358,7 @@ class Peer:
             mined_block = self.mine_block(new_block)
             if mined_block:
                 self.add_block(mined_block)
-            # Add a small delay to prevent rapid-fire mining loops, if desired
+            # Add a small delay to prevent rapid-fire mining loops
             time.sleep(1)
 
     def start(self):
