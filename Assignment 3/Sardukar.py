@@ -3,11 +3,32 @@ import json
 import threading
 import time
 import uuid
+import hashlib
 import multiprocessing
-from threading import Lock
+import os
 from BlockchainFetcher import BlockchainFetcher
 from Blockchain import Blockchain
 
+
+# Define the mining function outside the class to make it picklable
+def mine_nonce_range(block_data, start_nonce, end_nonce, difficulty, result_queue):
+    """Function to mine a nonce range."""
+    pid = os.getpid()
+    target = '0' * difficulty
+
+    for nonce in range(start_nonce, end_nonce):
+        # Check if a result has already been found
+        if not result_queue.empty():
+            return
+        block_data['nonce'] = str(nonce)
+        block_hash = hashlib.sha256(json.dumps(block_data, sort_keys=True).encode()).hexdigest()
+        if block_hash.endswith(target):
+            # Put the result in the queue
+            result_queue.put((nonce, block_hash))
+            print(f"Process {pid} found nonce: {nonce}, Hash: {block_hash}")
+            return
+        if nonce % 100000 == 0:
+            print(f"Process {pid} still mining... Current nonce: {nonce}")
 
 class Peer:
     GOSSIP_INTERVAL = 30  # Re-GOSSIP every 30 seconds
@@ -23,15 +44,12 @@ class Peer:
         ]  # Removed goose.cs.umanitoba.ca
         self.tracked_peers = set()  # Dynamically track peers
         self.blockchain = Blockchain()  # Initialize the blockchain
-        self.blockchain_lock = Lock()  # Lock for thread-safe blockchain access
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.host, self.port))
         self.running = True
         self.gossip_seen = set()  # Keep track of seen GOSSIP IDs
 
-        self.name = "Baron Harkonen"
-
-        self.CONSENSUS_INTERVAL = 60  # Perform consensus every 60 seconds
+        self.name = "Nico Rosberg"
 
     # -------------------- Mining Methods --------------------
 
@@ -43,11 +61,9 @@ class Peer:
             if len(msg) > self.blockchain.MAX_MESSAGE_LENGTH:
                 raise ValueError("Message exceeds maximum length of 20 characters.")
 
-        with self.blockchain_lock:
-            height = len(self.blockchain.chain)
         new_block = {
             'type': 'GET_BLOCK_REPLY',
-            'height': height,
+            'height': len(self.blockchain.chain),
             'messages': messages,
             'minedBy': miner_name,
             'nonce': '',  # To be determined during mining
@@ -57,57 +73,75 @@ class Peer:
         return new_block
 
     def mine_block(self, block):
-        """Mine the block to meet the difficulty requirement using multiprocessing."""
-        print(f"Mining block with height {block['height']} using multiprocessing...")
+        """Mine the block to meet the difficulty requirement using multi-processing."""
+        print(f"Mining block with height {block['height']} using multi-processing...")
+        difficulty = self.blockchain.DIFFICULTY
 
-        num_processes = multiprocessing.cpu_count()
-        print(f"Starting mining with {num_processes} processes...")
         manager = multiprocessing.Manager()
-        return_dict = manager.dict()  # Shared dict to store the result
-        stop_event = multiprocessing.Event()
+        result_queue = manager.Queue()
+        num_processes = multiprocessing.cpu_count()
+        nonce_range_per_process = 1000000  # Adjust as needed
 
-        def worker(start_nonce, step, block, return_dict, stop_event):
-            nonce = start_nonce
-            while not stop_event.is_set():
-                block_copy = block.copy()
-                block_copy['nonce'] = str(nonce)
-                block_copy['hash'] = self.blockchain.calculate_hash(block_copy)
-                if block_copy['hash'].endswith('0' * self.blockchain.DIFFICULTY):
-                    # Found a valid nonce
-                    print(f"Process {multiprocessing.current_process().name} found nonce: {nonce}")
-                    return_dict['block'] = block_copy
-                    stop_event.set()
-                    break
-                nonce += step
-                if nonce % 100000 == 0:
-                    print(f"Process {multiprocessing.current_process().name} still mining... Current nonce: {nonce}")
+        # Prepare block data without the nonce and hash
+        block_data = {
+            'type': block['type'],
+            'height': block['height'],
+            'messages': block['messages'],
+            'minedBy': block['minedBy'],
+            'timestamp': block['timestamp']
+        }
 
         processes = []
-        for i in range(num_processes):
-            p = multiprocessing.Process(target=worker, args=(i, num_processes, block, return_dict, stop_event))
-            processes.append(p)
-            p.start()
+        start_nonce = 0
+        found = False
 
-        for p in processes:
-            p.join()
+        while not found:
+            processes = []  # Reset processes list each iteration
+            for i in range(num_processes):
+                process_start_nonce = start_nonce + i * nonce_range_per_process
+                process_end_nonce = process_start_nonce + nonce_range_per_process
+                p = multiprocessing.Process(
+                    target=mine_nonce_range,
+                    args=(block_data.copy(), process_start_nonce, process_end_nonce, difficulty, result_queue)
+                )
+                processes.append(p)
+                p.start()
 
-        if 'block' in return_dict:
-            print(f"Block mined! Nonce: {return_dict['block']['nonce']}, Hash: {return_dict['block']['hash']}")
-            return return_dict['block']
-        else:
-            print("Failed to mine block.")
-            return None
+            # Wait for a result to be available or all processes to finish their range
+            nonce_found = False
+            while True:
+                if not result_queue.empty():
+                    nonce, block_hash = result_queue.get()
+                    nonce_found = True
+                    found = True
+                    break
+                if all(not p.is_alive() for p in processes):
+                    break
+                time.sleep(0.1)  # Prevent busy waiting
+
+            # Terminate all processes
+            for p in processes:
+                p.terminate()
+                p.join()
+
+            if nonce_found:
+                # Set the nonce and hash
+                block['nonce'] = str(nonce)
+                block['hash'] = block_hash
+                print(f"Block mined! Nonce: {block['nonce']}, Hash: {block['hash']}")
+                return block
+            else:
+                print(f"Still mining... Checked nonces up to {start_nonce + num_processes * nonce_range_per_process}")
+                start_nonce += num_processes * nonce_range_per_process  # Move to the next nonce range
 
     def add_block(self, block):
         """Add a mined block to the blockchain."""
-        with self.blockchain_lock:
-            previous_block = self.blockchain.chain[-1] if self.blockchain.chain else None
-            if self.blockchain.is_valid_block(block, previous_block):
-                self.blockchain.chain.append(block)
-                print(f"Block added to the blockchain! Height: {block['height']}, Hash: {block['hash']}")
-                self.announce_block(block)
-            else:
-                print("Mined block is invalid and was not added.")
+        if self.blockchain.is_valid_block(block, self.blockchain.chain[-1]):
+            self.blockchain.chain.append(block)
+            print(f"Block added to the blockchain! Height: {block['height']}, Hash: {block['hash']}")
+            self.announce_block(block)
+        else:
+            print("Mined block is invalid and was not added.")
 
     def announce_block(self, block):
         """Announce the new block to peers."""
@@ -135,24 +169,11 @@ class Peer:
             "hash": message["hash"],
             "timestamp": message["timestamp"],
         }
-        with self.blockchain_lock:
-            # Check if the block is already in the chain
-            if any(b['hash'] == block['hash'] for b in self.blockchain.chain):
-                # Duplicate block, ignore
-                return
-
-            # Check if the block extends the current chain
-            if block['height'] == len(self.blockchain.chain):
-                previous_block = self.blockchain.chain[-1] if self.blockchain.chain else None
-                if self.blockchain.is_valid_block(block, previous_block):
-                    self.blockchain.chain.append(block)
-                    print(f"Block announced by {message['minedBy']} added to the blockchain.")
-                else:
-                    print(f"Invalid block announced by {message['minedBy']} rejected.")
-            else:
-                # The announced block doesn't fit directly; trigger consensus
-                print("Received a block that doesn't fit the current chain. Triggering consensus...")
-                self.perform_consensus()
+        if self.blockchain.is_valid_block(block, self.blockchain.chain[-1]):
+            self.blockchain.chain.append(block)
+            print(f"Block announced by {message['minedBy']} added to the blockchain.")
+        else:
+            print(f"Invalid block announced by {message['minedBy']} rejected.")
 
     # -------------------- Gossip Methods --------------------
 
@@ -166,6 +187,8 @@ class Peer:
             "id": message_id,
             "name": self.name,
         }
+        print(f"Sending GOSSIP with ID {message_id}...")
+
         # Send GOSSIP to well-known peers
         for peer in self.well_known_peers:
             self.send_message(gossip_message, peer)
@@ -179,9 +202,10 @@ class Peer:
         """Handle incoming GOSSIP messages."""
         gossip_id = message.get("id")
         if gossip_id in self.gossip_seen:
-            # Duplicate GOSSIP, ignore
+            print(f"Ignoring duplicate GOSSIP with ID {gossip_id}")
             return
 
+        print(f"Received GOSSIP with ID {gossip_id} from {addr}")
         self.gossip_seen.add(gossip_id)
         self.tracked_peers.add((message["host"], message["port"]))
 
@@ -200,7 +224,7 @@ class Peer:
             self.send_gossip()
             time.sleep(self.GOSSIP_INTERVAL)
 
-    # -------------------- Consensus Methods --------------------
+    # -------------------- Other Methods --------------------
 
     def get_peer_stats(self, peer_host, peer_port):
         """Get blockchain stats from a peer."""
@@ -244,37 +268,22 @@ class Peer:
             print("Failed to find any valid peers with longer chains. Skipping consensus.")
             return
 
-        with self.blockchain_lock:
-            local_height = len(self.blockchain.chain)
-        if longest_chain_stats["height"] <= local_height - 1:
+        if longest_chain_stats["height"] <= len(self.blockchain.chain) - 1:
             print("Local blockchain is already up to date or matches the longest chain.")
             return
 
         print(f"Peer {longest_chain_peer[0]}:{longest_chain_peer[1]} has the longest chain (height {longest_chain_stats['height']}). Fetching their blockchain...")
 
         # Clear local chain and fetch the longer one
-        with self.blockchain_lock:
-            self.blockchain.chain = []
+        self.blockchain.chain = []
         fetcher = BlockchainFetcher(self.blockchain)
         fetcher.fetch_all_blocks(*longest_chain_peer)
 
         # Validate the fetched chain and print stats
-        with self.blockchain_lock:
-            fetched_chain = self.blockchain.chain
-            is_valid = self.blockchain.validate_fetched_chain(fetched_chain)
-        if is_valid:
-            print(f"Consensus complete. Blockchain synchronized with height: {len(fetched_chain)}")
+        if self.blockchain.validate_fetched_chain(self.blockchain.chain):
+            print(f"Consensus complete. Blockchain synchronized with height: {len(self.blockchain.chain) - 1}")
         else:
             print("Fetched blockchain is invalid. Keeping local blockchain.")
-
-    def periodic_consensus(self):
-        """Periodically perform consensus to synchronize with the network."""
-        while self.running:
-            time.sleep(self.CONSENSUS_INTERVAL)
-            print("Performing periodic consensus...")
-            self.perform_consensus()
-
-    # -------------------- Other Methods --------------------
 
     def handle_message(self, message, addr):
         """Handle incoming messages based on their type."""
@@ -282,34 +291,33 @@ class Peer:
 
         if msg_type == "STATS":
             # Respond with local blockchain stats
-            with self.blockchain_lock:
-                response = {
-                    "type": "STATS_REPLY",
-                    "height": len(self.blockchain.chain),
-                    "hash": self.blockchain.chain[-1]["hash"] if self.blockchain.chain else None,
-                }
+            response = {
+                "type": "STATS_REPLY",
+                "height": len(self.blockchain.chain),
+                "hash": self.blockchain.chain[-1]["hash"] if self.blockchain.chain else None,
+            }
+            print(f"Sending STATS_REPLY: {response}")
             self.send_message(response, addr)
 
         elif msg_type == "GET_BLOCK":
             # Return a specific block
             height = message.get("height")
-            with self.blockchain_lock:
-                if height is not None and 0 <= height < len(self.blockchain.chain):
-                    block = self.blockchain.chain[height]
-                    response = {
-                        "type": "GET_BLOCK_REPLY",
-                        **block
-                    }
-                else:
-                    response = {
-                        "type": "GET_BLOCK_REPLY",
-                        "height": None,
-                        "messages": None,
-                        "minedBy": None,
-                        "nonce": None,
-                        "hash": None,
-                        "timestamp": None
-                    }
+            if height is not None and 0 <= height < len(self.blockchain.chain):
+                block = self.blockchain.chain[height]
+                response = {
+                    "type": "GET_BLOCK_REPLY",
+                    **block
+                }
+            else:
+                response = {
+                    "type": "GET_BLOCK_REPLY",
+                    "height": None,
+                    "messages": None,
+                    "minedBy": None,
+                    "nonce": None,
+                    "hash": None,
+                    "timestamp": None
+                }
             self.send_message(response, addr)
 
         elif msg_type == "CONSENSUS":
@@ -340,23 +348,6 @@ class Peer:
             except Exception as e:
                 print(f"Error handling message: {e}")
 
-    def is_chain_synced(self):
-        """Check if the local chain height matches the network's height."""
-        max_peer_height = self.get_max_peer_height()
-        with self.blockchain_lock:
-            local_height = len(self.blockchain.chain)
-        return local_height >= max_peer_height
-
-    def get_max_peer_height(self):
-        """Get the maximum chain height among known peers."""
-        max_height = 0
-        for peer_host, peer_port in self.well_known_peers:
-            peer_stats = self.get_peer_stats(peer_host, peer_port)
-            if peer_stats and 'height' in peer_stats:
-                if peer_stats['height'] > max_height:
-                    max_height = peer_stats['height']
-        return max_height
-
     def start(self):
         """Start the peer, including the listener thread and consensus process."""
         threading.Thread(target=self.listen, daemon=True).start()
@@ -364,28 +355,23 @@ class Peer:
 
         threading.Thread(target=self.periodic_gossip, daemon=True).start()
 
-        threading.Thread(target=self.periodic_consensus, daemon=True).start()
-
         # Perform initial consensus
         print("Performing initial consensus...")
         self.perform_consensus()
         print("Initial consensus complete.")
 
-        # Continuous mining loop
+        # Manual mining through user input
         try:
-            while self.running:
-                # Check if local chain is synchronized before mining
-                if self.is_chain_synced():
+            while True:
+                command = input("Enter a command ('mine' to mine a block, 'stop' to stop the peer): ").strip().lower()
+                if command == "mine":
                     messages = ["Jihan", "Park", "Mirha"]  # Example messages
                     new_block = self.create_new_block(messages, self.name)
                     mined_block = self.mine_block(new_block)
                     if mined_block:
                         self.add_block(mined_block)
-                else:
-                    print("Local chain is not synchronized. Waiting before mining...")
-                    time.sleep(self.CONSENSUS_INTERVAL)
-        except KeyboardInterrupt:
-            pass
+                elif command == "stop":
+                    break
         finally:
             self.stop()
 
