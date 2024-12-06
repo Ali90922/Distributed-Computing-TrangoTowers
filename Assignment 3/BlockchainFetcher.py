@@ -29,7 +29,17 @@ class BlockchainFetcher:
             all_peers: A list of tuples (host, port) of known peers.
             longest_chain_peer: A tuple (host, port) of the peer with the longest chain.
             longest_chain_height: The height of the longest chain.
+
+            
         """
+
+
+        all_peers = [
+    ("silicon.cs.umanitoba.ca", 8999),
+    ("eagle.cs.umanitoba.ca", 8999),
+    ("hawk.cs.umanitoba.ca", 8999)
+]
+
         # If there are no peers in all_peers, fallback directly to longest_chain_peer
         if not all_peers:
             all_peers = [longest_chain_peer]
