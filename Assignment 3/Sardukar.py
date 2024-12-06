@@ -187,7 +187,6 @@ class Peer:
             "id": message_id,
             "name": self.name,
         }
-        print(f"Sending GOSSIP with ID {message_id}...")
 
         # Send GOSSIP to well-known peers
         for peer in self.well_known_peers:
@@ -202,10 +201,8 @@ class Peer:
         """Handle incoming GOSSIP messages."""
         gossip_id = message.get("id")
         if gossip_id in self.gossip_seen:
-            print(f"Ignoring duplicate GOSSIP with ID {gossip_id}")
             return
 
-        print(f"Received GOSSIP with ID {gossip_id} from {addr}")
         self.gossip_seen.add(gossip_id)
         self.tracked_peers.add((message["host"], message["port"]))
 
