@@ -37,15 +37,8 @@ class BlockchainFetcher:
         for height in range(longest_chain_height + 1):  # Assuming longest_chain_height is inclusive
             block_fetched = False
 
-            # Try each known peer (except the longest_chain_peer initially) in a round-robin manner
-            # to fetch the block. For example, distribute workloads like:
-            # block 0 from all_peers[0], block 1 from all_peers[1], etc.
-            # If you want a simpler round-robin: just pick a peer based on height % len(all_peers).
-            # If you want to skip the longest_chain_peer in the first attempt, filter it out first.
             
-            # We'll first try peers other than the longest_chain_peer:
             peers_to_try = [p for p in all_peers if p != longest_chain_peer]
-            # If no other peers, peers_to_try will be empty and we'll go straight to longest_chain_peer after this attempt.
 
             # Round-robin pick a peer based on height (this ensures distribution)
             if peers_to_try:
@@ -117,6 +110,6 @@ class BlockchainFetcher:
                 if sock:
                     sock.close()
 
-        # If we exhausted retries, return False
+        # If I have exhausted retries, return False
         print(f"Failed to fetch block {height} from {peer_host}:{peer_port} after {self.max_retries} attempts.")
         return False
