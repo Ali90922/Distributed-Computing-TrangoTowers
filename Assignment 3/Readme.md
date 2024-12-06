@@ -22,7 +22,7 @@ Files in the Project
 
 3. `Sardukar.py`:
    - Same functionality as Peer.py just uses multi threading and focuses on mining blocks.
-   - Finds a nonce that satisfies the difficulty requirement for proof-of-work.
+   - Automatically starts mining, does not need the user to prompt it to mine
 
 4. `BlockchainFetcher.py`:
    - Used for fetching the blockchain from peers during synchronization.
@@ -42,16 +42,16 @@ Files in the Project
 How to Run the Code
 -------------------
 1. Start a peer:
-   - Run `Script.py` with the required arguments:
+   - Run `Peer.py` with the required arguments:
      ```
-     python Script.py --host <HOST_IP> --port <PORT> --name <PEER_NAME>
+     python Peer.py --host <HOST_IP> --port <PORT> --name <PEER_NAME>
      ```
 
 2. Join the network:
    - The peer will automatically send a GOSSIP message to one of the well-known hosts.
 
 3. Mining:
-   - Mining is implemented in `Sardukar.py`. You can initiate mining directly or modify the main loop.
+   - Mining is implemented in `Sardukar.py`. The Sardukar file is a slightly modified version of Peer.py with focus on mining - 
 
 4. Testing Protocols:
    - Use the `test_cli.py` script to send protocol messages like `GET_BLOCK`, `STATS`, and `CONSENSUS`:
